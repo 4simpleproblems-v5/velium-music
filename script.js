@@ -6,6 +6,7 @@ let currentTrack = null;
 let currentResults = [];
 let searchType = 'song';
 let lastQuery = '';
+let isPlaying = false;
 
 // DOM Elements
 const searchBox = document.getElementById('search-box');
@@ -22,6 +23,13 @@ const closeLyricsBtn = document.getElementById('close-lyrics');
 const lyricsTitle = document.getElementById('lyrics-title');
 const lyricsArtist = document.getElementById('lyrics-artist');
 const lyricsText = document.getElementById('lyrics-text');
+
+// Custom Player Elements
+const playPauseBtn = document.getElementById('play-pause-btn');
+const seekSlider = document.getElementById('seek-slider');
+const currentTimeElem = document.getElementById('current-time');
+const totalDurationElem = document.getElementById('total-duration');
+const volumeSlider = document.getElementById('volume-slider');
 
 // Event Listeners
 searchBtn.addEventListener('click', () => handleSearch());
@@ -41,6 +49,37 @@ closeLyricsBtn.addEventListener('click', () => {
     lyricsOverlay.classList.remove('active');
 });
 
+// Custom Player Events
+playPauseBtn.addEventListener('click', togglePlay);
+
+audioPlayer.addEventListener('timeupdate', updateProgress);
+audioPlayer.addEventListener('loadedmetadata', () => {
+    totalDurationElem.textContent = formatTime(audioPlayer.duration);
+    seekSlider.max = Math.floor(audioPlayer.duration);
+});
+audioPlayer.addEventListener('ended', () => {
+    isPlaying = false;
+    updatePlayBtn();
+    seekSlider.value = 0;
+});
+audioPlayer.addEventListener('play', () => {
+    isPlaying = true;
+    updatePlayBtn();
+});
+audioPlayer.addEventListener('pause', () => {
+    isPlaying = false;
+    updatePlayBtn();
+});
+
+seekSlider.addEventListener('input', () => {
+    audioPlayer.currentTime = seekSlider.value;
+});
+
+volumeSlider.addEventListener('input', (e) => {
+    audioPlayer.volume = e.target.value;
+});
+
+
 // Search Logic
 async function handleSearch() {
     const query = searchBox.value.trim();
@@ -55,7 +94,6 @@ async function handleSearch() {
         const data = await res.json();
         
         if (data.status === 'SUCCESS' || data.success || data.data) {
-             // The API structure varies a bit sometimes, but usually data.data.results
              let results = data.data.results || data.data;
              renderResults(results);
         } else {
@@ -82,23 +120,23 @@ function renderResults(results) {
         card.className = 'card';
         
         // Image
-        const img = document.createElement('img');
-        // Handle different image structures (sometimes array, sometimes string)
         let imgUrl = '';
         if (Array.isArray(item.image)) {
-            imgUrl = item.image[item.image.length - 1].link; // Highest quality
+            imgUrl = item.image[item.image.length - 1].link; 
         } else if (typeof item.image === 'string') {
              imgUrl = item.image;
         } else {
             imgUrl = 'https://via.placeholder.com/150?text=No+Image';
         }
+        
+        const img = document.createElement('img');
         img.src = imgUrl;
         
         // Title
         const title = document.createElement('h3');
-        title.innerHTML = item.name || item.title; // Using innerHTML to decode entities if any
+        title.innerHTML = item.name || item.title; 
 
-        // Subtitle (Artist or Description)
+        // Subtitle
         const sub = document.createElement('p');
         if (searchType === 'song') {
             sub.textContent = item.primaryArtists || item.artist || '';
@@ -119,8 +157,6 @@ function renderResults(results) {
             } else if (searchType === 'artist') {
                 loadArtistDetails(item.id, item);
             } else if (searchType === 'album') {
-                 // For now, if album click, maybe try to play or just show generic alert
-                 // But better: load Album details. 
                  loadAlbumDetails(item.id);
             }
         });
@@ -137,11 +173,30 @@ async function loadArtistDetails(artistId, artistObj) {
     contentArea.innerHTML = '<div class="loader"><i class="fa-solid fa-spinner fa-spin fa-3x"></i></div>';
     
     try {
-        const res = await fetch(`${API_BASE}/artists?id=${artistId}`);
-        const data = await res.json();
+        // Fetch artist details
+        const artistRes = await fetch(`${API_BASE}/artists?id=${artistId}`);
+        const artistData = await artistRes.json();
         
-        const artistData = data.data || {};
-        const songs = artistData.topSongs || [];
+        const artist = artistData.data || {};
+        
+        // Try to fetch artist songs specifically if possible, otherwise rely on topSongs
+        // The previous implementation used topSongs from the artist details. 
+        // Let's see if we can get more. 
+        // Some JioSaavn APIs support /artists/{id}/songs?page=1&count=50
+        // We will try to fetch more songs if available, but for now fallback to topSongs
+        
+        let songs = artist.topSongs || [];
+        
+        // Try fetching more songs (pagination attempt)
+        try {
+             const songsRes = await fetch(`${API_BASE}/artists/${artistId}/songs?page=1&limit=50`);
+             const songsData = await songsRes.json();
+             if (songsData.data && songsData.data.results) {
+                 songs = songsData.data.results;
+             }
+        } catch (err) {
+            console.log("Could not fetch extra songs, using top songs.", err);
+        }
 
         // Sort by year/release date (descending)
         songs.sort((a, b) => {
@@ -150,7 +205,7 @@ async function loadArtistDetails(artistId, artistObj) {
             return dateB - dateA;
         });
 
-        renderArtistView(artistData, songs);
+        renderArtistView(artist, songs);
 
     } catch (e) {
         console.error(e);
@@ -182,7 +237,6 @@ function renderArtistView(artist, songs) {
     
     contentArea.innerHTML = html;
 
-    // Re-attach event listeners for play buttons in the string HTML
     songs.forEach(song => {
         const btn = document.getElementById(`play-${song.id}`);
         if (btn) {
@@ -194,13 +248,12 @@ function renderArtistView(artist, songs) {
 function createSongRow(song) {
     let imgUrl = '';
     if (Array.isArray(song.image)) {
-        imgUrl = song.image[0].link; // Low qual for list
+        imgUrl = song.image[0].link; 
     } else {
         imgUrl = song.image;
     }
     
-    // Duration formatting
-    const duration = song.duration ? new Date(song.duration * 1000).toISOString().substr(14, 5) : '';
+    const duration = song.duration ? formatTime(song.duration) : '';
 
     return `
         <div class="song-row">
@@ -217,7 +270,7 @@ function createSongRow(song) {
     `;
 }
 
-// Album Details (Basic implementation to support click)
+// Album Details
 async function loadAlbumDetails(albumId) {
      contentArea.innerHTML = '<div class="loader"><i class="fa-solid fa-spinner fa-spin fa-3x"></i></div>';
      try {
@@ -225,7 +278,7 @@ async function loadAlbumDetails(albumId) {
         const data = await res.json();
         const album = data.data;
         
-        renderArtistView({ // Reuse artist view structure
+        renderArtistView({ 
             name: album.name,
             image: album.image,
             followerCount: null,
@@ -250,14 +303,12 @@ function playSong(song) {
 
     let downloadUrl = '';
     if (Array.isArray(song.downloadUrl)) {
-        // Find 320kbps or highest
         const best = song.downloadUrl.find(d => d.quality === '320kbps') || song.downloadUrl[song.downloadUrl.length - 1];
         downloadUrl = best.link;
     } else {
         downloadUrl = song.downloadUrl;
     }
 
-    // Decode HTML entities in name
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = song.name;
     const decodedTitle = tempDiv.textContent;
@@ -275,6 +326,37 @@ function playSong(song) {
     playerBar.style.display = 'flex';
 }
 
+function togglePlay() {
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+    } else {
+        audioPlayer.pause();
+    }
+}
+
+function updatePlayBtn() {
+    if (isPlaying) {
+        playPauseBtn.innerHTML = '<i class="fa-solid fa-circle-pause"></i>';
+    } else {
+        playPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+    }
+}
+
+function updateProgress() {
+    const { currentTime, duration } = audioPlayer;
+    if (isNaN(duration)) return;
+    
+    const progressPercent = (currentTime / duration) * 100;
+    seekSlider.value = currentTime;
+    currentTimeElem.textContent = formatTime(currentTime);
+}
+
+function formatTime(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+}
+
 // Lyrics Logic
 async function openLyrics() {
     if (!currentTrack) return;
@@ -284,18 +366,31 @@ async function openLyrics() {
     lyricsArtist.textContent = currentTrack.primaryArtists || currentTrack.artist || '';
     lyricsText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
 
-    // Construct URL
+    // Helper to decode entities like &amp;
+    const decodeHtml = (html) => {
+        const txt = document.createElement("textarea");
+        txt.innerHTML = html;
+        return txt.value;
+    };
+
     // Extract first artist if multiple
     let artistName = currentTrack.primaryArtists || currentTrack.artist || '';
+    // Handle html entities in artist name too
+    artistName = decodeHtml(artistName);
+    
     if (artistName.includes(',')) artistName = artistName.split(',')[0].trim();
     
-    // Clean title (remove (feat. ...), etc if needed, but API might handle it)
     let trackName = currentTrack.name;
-    // Basic cleanup: remove text inside () if it contains "feat" or "ft"
-    trackName = trackName.replace(/\s*\(.*?(feat|ft).*?\)/gi, '');
-
+    trackName = decodeHtml(trackName);
+    
+    // Aggressive cleaning for better matching
+    // Remove (feat. ...), (From ...), [remix], etc.
+    trackName = trackName.replace(/\s*\(.*?(feat|ft|from|cover|remix).*?\)/gi, '');
+    trackName = trackName.replace(/\s*\[.*?\]/gi, ''); // Remove anything in brackets
+    trackName = trackName.trim();
 
     const url = `${LYRICS_API_BASE}?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}`;
+    console.log("Fetching lyrics from:", url);
 
     try {
         const res = await fetch(url);
