@@ -57,13 +57,14 @@
                     </div>
                 </div>
 
-                <!-- HISTORY / QUEUE (Visual Placeholder) -->
+                <!-- PLAYLISTS / LIBRARY -->
                 <div>
-                    <h2 class="text-lg text-white mb-2">History</h2>
-                    <div id="history-list" class="compact-list-wrapper">
-                        <div class="compact-list-items p-2 text-gray-500 text-sm italic text-center">
-                            No recent searches.
-                        </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-lg text-white">Library</h2>
+                        <button id="create-playlist-btn" class="text-gray-500 hover:text-white" title="New Playlist"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div id="library-list" class="compact-list-wrapper">
+                        <!-- Playlists injected here -->
                     </div>
                 </div>
 
@@ -74,14 +75,14 @@
         <section class="feed-panel">
             <div class="feed-content-inner">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl text-white" id="main-header">Results</h1>
+                    <h1 class="text-2xl text-white" id="main-header">Home</h1>
                 </div>
                 
                 <div id="content-area" class="photo-grid">
                     <!-- Results injected here -->
-                    <div class="col-span-full text-center text-gray-500 mt-20">
+                    <div class="col-span-full text-center text-gray-500 mt-20 w-full">
                         <i class="fas fa-music text-4xl mb-4 opacity-50"></i>
-                        <p>Search for your favorite tracks to begin.</p>
+                        <p>Search for your favorite tracks or select a playlist.</p>
                     </div>
                 </div>
             </div>
@@ -92,7 +93,7 @@
     <!-- PLAYER BAR -->
     <div id="player-bar" class="hidden">
         <div class="player-info">
-            <img id="player-img" src="" alt="Cover" title="Click for Lyrics">
+            <img id="player-img" src="" alt="Cover">
             <div class="player-text">
                 <span class="player-title" id="player-title">Song Title</span>
                 <span class="player-artist" id="player-artist">Artist Name</span>
@@ -101,9 +102,7 @@
         
         <div class="custom-player-controls">
             <div class="control-buttons">
-                <!-- <button class="player-btn"><i class="fas fa-step-backward"></i></button> -->
                 <button class="player-btn play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
-                <!-- <button class="player-btn"><i class="fas fa-step-forward"></i></button> -->
             </div>
             <div class="progress-container">
                 <span id="current-time">0:00</span>
@@ -116,6 +115,7 @@
              <i class="fas fa-volume-up"></i>
              <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1">
              <a href="#" id="download-btn" class="player-btn text-sm ml-2" target="_blank" title="Download"><i class="fas fa-download"></i></a>
+             <button id="player-like-btn" class="player-btn text-sm ml-2" title="Like"><i class="far fa-heart"></i></button>
         </div>
         
         <audio id="audio-player" class="hidden"></audio>

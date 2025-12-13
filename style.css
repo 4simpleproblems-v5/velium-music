@@ -76,7 +76,6 @@ h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
     display: flex; 
     width: 100vw;
     height: 100vh; 
-    /* Removed top margin since we don't have the nav bar */
 }
 
 /* --- SIDEBAR --- */
@@ -143,19 +142,23 @@ h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
 
 /* --- GRID & PHOTOS --- */
 .photo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-    gap: 1rem; 
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
+
 .photo-thumbnail {
     position: relative;
     overflow: hidden;
     border-radius: 0.75rem; /* 12px */
     cursor: pointer;
-    aspect-ratio: 1 / 1; 
+    /* Fixed width logic as requested */
+    width: 200px;
+    height: 200px;
     background-color: #0a0a0a;
     border: 1px solid #1a1a1a;
     transition: border-color 0.2s;
+    flex-shrink: 0;
 }
 .photo-thumbnail:hover {
     border-color: #4f46e5;
@@ -231,6 +234,9 @@ h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
     transition: all 0.2s;
 }
 .song-row-actions button:hover { background: #fff; color: #000; }
+.song-row-actions button.liked {
+    color: #e11d48; border-color: #e11d48;
+}
 
 
 /* --- PLAYER BAR --- */
@@ -253,7 +259,7 @@ h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
     width: 56px; height: 56px; 
     border-radius: 0.5rem; /* 8px */
     border: 1px solid #333;
-    cursor: pointer;
+    /* Removed cursor pointer as per request to remove click function */
 }
 .player-text { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
 .player-title { color: white; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
