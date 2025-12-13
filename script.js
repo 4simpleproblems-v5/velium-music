@@ -282,8 +282,9 @@ function openPlaylist(playlistId) {
     // Attach events (similar to liked songs)
      pl.songs.forEach(song => {
         const btn = document.getElementById(`play-${song.id}`);
-        // Like button in playlist view? Maybe just play for now
+        const likeBtn = document.getElementById(`like-${song.id}`);
         if (btn) btn.addEventListener('click', () => playSong(song));
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(song));
     });
 }
 
@@ -326,7 +327,7 @@ function renderResults(results) {
 
     results.forEach(item => {
         const card = document.createElement('div');
-        card.className = 'photo-thumbnail';
+        card.className = 'photo-thumbnail'; // Using the Photo Grid class
         
         const imgUrl = getImageUrl(item);
         
@@ -376,28 +377,30 @@ async function loadArtistDetails(artistId, artistObj) {
         
         let songs = artist.topSongs || [];
         
-        try {
-             const songsRes = await fetch(`${API_BASE}/artists/${artistId}/songs?page=1&limit=50`);
-             const songsData = await songsRes.json();
-             if (songsData.data && songsData.data.results) {
-                 songs = songsData.data.results;
-             }
-        } catch (err) { console.log("Extra songs fetch failed", err); }
+        // Removed the failing call to /artists/{artistId}/songs
+        // We will rely only on artist.topSongs
 
         // Filter songs by artist name (strict check as requested)
-        // We normalize names to lowercase for comparison
-        const artistName = artist.name.toLowerCase();
+        const artistNameLower = artist.name.toLowerCase();
         songs = songs.filter(song => {
-            const songArtist = (song.primaryArtists || song.artist || '').toLowerCase();
-            // Check if the primary artist string includes the artist name
-            return songArtist.includes(artistName);
+            const songPrimaryArtistsLower = (song.primaryArtists || song.artist || '').toLowerCase();
+            return songPrimaryArtistsLower.includes(artistNameLower);
         });
 
+        // Advanced Sorting for Relevance:
+        // Prioritize: (1) higher playCount, (2) more recent year/releaseDate
         songs.sort((a, b) => {
-            const dateA = new Date(a.releaseDate || a.year);
-            const dateB = new Date(b.releaseDate || b.year);
-            return dateB - dateA;
+            const playCountA = parseInt(a.playCount) || 0;
+            const playCountB = parseInt(b.playCount) || 0;
+            const yearA = parseInt(a.year) || 0;
+            const yearB = parseInt(b.year) || 0;
+
+            if (playCountA !== playCountB) {
+                return playCountB - playCountA; // Higher playCount first
+            }
+            return yearB - yearA; // More recent year first
         });
+
 
         renderArtistView(artist, songs);
 
