@@ -25,7 +25,7 @@ const playerImg = document.getElementById('player-img');
 const playerTitle = document.getElementById('player-title');
 const playerArtist = document.getElementById('player-artist');
 const downloadBtn = document.getElementById('download-btn');
-const playerLikeBtn = document.getElementById('player-like-btn'); // New
+const playerLikeBtn = document.getElementById('player-like-btn'); 
 
 const lyricsOverlay = document.getElementById('lyrics-overlay');
 const closeLyricsBtn = document.getElementById('close-lyrics');
@@ -33,8 +33,8 @@ const lyricsTitle = document.getElementById('lyrics-title');
 const lyricsArtist = document.getElementById('lyrics-artist');
 const lyricsText = document.getElementById('lyrics-text');
 const mainHeader = document.getElementById('main-header');
-const libraryList = document.getElementById('library-list'); // New
-const createPlaylistBtn = document.getElementById('create-playlist-btn'); // New
+const libraryList = document.getElementById('library-list'); 
+const createPlaylistBtn = document.getElementById('create-playlist-btn'); 
 
 // Custom Player Elements
 const playPauseBtn = document.getElementById('play-pause-btn');
@@ -44,18 +44,20 @@ const totalDurationElem = document.getElementById('total-duration');
 const volumeSlider = document.getElementById('volume-slider');
 
 // Initialization
-try {
-    console.log("Initializing Velium Music...");
-    loadLibrary();
-    renderLibrary();
-    console.log("Initialization complete.");
-} catch (e) {
-    console.error("Initialization failed:", e);
-}
+(async function init() {
+    try {
+        console.log("Initializing Velium Music...");
+        await loadLibrary();
+        renderLibrary();
+        console.log("Initialization complete.");
+    } catch (e) {
+        console.error("Initialization failed:", e);
+    }
+})();
 
 // Event Listeners
-searchBtn.addEventListener('click', () => handleSearch());
-searchBox.addEventListener('keypress', (e) => {
+if(searchBtn) searchBtn.addEventListener('click', () => handleSearch());
+if(searchBox) searchBox.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSearch();
 });
 
@@ -66,13 +68,12 @@ document.querySelectorAll('input[name="search-type"]').forEach(radio => {
     });
 });
 
-// Removed lyrics trigger on playerImg click
-closeLyricsBtn.addEventListener('click', () => {
+if(closeLyricsBtn) closeLyricsBtn.addEventListener('click', () => {
     lyricsOverlay.classList.remove('active');
 });
 
 // Create Playlist
-createPlaylistBtn.addEventListener('click', () => {
+if(createPlaylistBtn) createPlaylistBtn.addEventListener('click', async () => {
     const name = prompt("Enter playlist name:");
     if (name) {
         const newPlaylist = {
@@ -82,14 +83,14 @@ createPlaylistBtn.addEventListener('click', () => {
             updatedAt: new Date().toISOString()
         };
         library.playlists.push(newPlaylist);
-        saveLibrary();
+        await saveLibrary();
         renderLibrary();
     }
 });
 
 // Custom Player Events
-playPauseBtn.addEventListener('click', togglePlay);
-playerLikeBtn.addEventListener('click', () => {
+if(playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
+if(playerLikeBtn) playerLikeBtn.addEventListener('click', () => {
     if (currentTrack) toggleLike(currentTrack);
 });
 
@@ -112,44 +113,49 @@ audioPlayer.addEventListener('pause', () => {
     updatePlayBtn();
 });
 
-seekSlider.addEventListener('input', () => {
+if(seekSlider) seekSlider.addEventListener('input', () => {
     audioPlayer.currentTime = seekSlider.value;
 });
 
-volumeSlider.addEventListener('input', (e) => {
+if(volumeSlider) volumeSlider.addEventListener('input', (e) => {
     audioPlayer.volume = e.target.value;
 });
 
 
-// Library Logic
-function loadLibrary() {
-    const stored = localStorage.getItem('velium_library');
-    if (stored) {
+// Library Logic (IndexedDB)
+async function loadLibrary() {
+    if (window.VeliumDB) {
         try {
-            library = JSON.parse(stored);
+            library = await window.VeliumDB.getLibrary();
             if (!library.likedSongs) library.likedSongs = [];
             if (!library.playlists) library.playlists = [];
         } catch (e) {
-            console.error("Failed to load library", e);
+            console.error("DB Load failed", e);
         }
+    } else {
+        // Fallback or Initial state
+        const stored = localStorage.getItem('velium_library');
+        if (stored) library = JSON.parse(stored);
     }
 }
 
-function saveLibrary() {
-    localStorage.setItem('velium_library', JSON.stringify(library));
+async function saveLibrary() {
+    if (window.VeliumDB) {
+        await window.VeliumDB.saveLibrary(library);
+    } else {
+        localStorage.setItem('velium_library', JSON.stringify(library));
+    }
 }
 
-function toggleLike(item) {
-    // Determine unique identifier
+async function toggleLike(item) {
     const trackUrl = item.song?.url || item.url;
     const trackId = item.id; 
 
-    // Find index matching either URL or ID
     const index = library.likedSongs.findIndex(s => {
         const sUrl = s.song?.url || s.url;
         const sId = s.id;
-        if (trackUrl && sUrl === trackUrl) return true;
         if (trackId && sId === trackId) return true;
+        if (trackUrl && sUrl === trackUrl) return true;
         return false;
     });
 
@@ -157,58 +163,67 @@ function toggleLike(item) {
         library.likedSongs.splice(index, 1);
         showToast("Removed from Liked Songs");
     } else {
-        // Ensure we save a clean object
-        let cleanItem;
-        if (item.song) {
-             // New structure
-             cleanItem = {
-                song: {
-                    name: item.song.name || 'Unknown',
-                    url: item.song.url,
-                    img: item.song.img,
-                    duration: item.song.duration
-                },
-                author: {
-                    name: item.author?.name || ''
-                }
-            };
-        } else {
-            // Legacy or flat structure
-             cleanItem = {
-                id: item.id, // Keep ID for legacy
-                song: {
-                    name: item.name || item.title || 'Unknown',
-                    url: item.url || item.downloadUrl || '', // Try to find a URL
-                    img: { small: getImageUrl(item), big: getImageUrl(item) },
-                    duration: item.duration
-                },
-                author: {
-                    name: item.primaryArtists || item.artist || ''
-                }
-            };
+        // Fix for persistence: Ensure we save enough data to play it back later
+        let cleanItem = { ...item }; // Copy everything first
+        
+        // Ensure critical fields exist
+        if (!cleanItem.downloadUrl && !cleanItem.url && cleanItem.song?.url) {
+            cleanItem.url = cleanItem.song.url;
         }
 
         library.likedSongs.unshift(cleanItem);
         showToast("Added to Liked Songs");
     }
-    saveLibrary();
+    await saveLibrary();
     renderLibrary();
     updatePlayerLikeIcon();
     
-    // If we are currently viewing the liked playlist, re-render it
     if (mainHeader.textContent === "Liked Songs") {
         openLikedSongs();
+    }
+}
+
+async function addToPlaylist(item) {
+    if (library.playlists.length === 0) {
+        alert("Create a playlist first!");
+        return;
+    }
+    // Simple prompt for now, but UI will handle this better in test.html
+    const names = library.playlists.map((pl, i) => `${i + 1}. ${pl.name}`).join('\n');
+    const choice = prompt(`Add to which playlist?\n${names}`);
+    const idx = parseInt(choice) - 1;
+    
+    if (idx >= 0 && idx < library.playlists.length) {
+        const pl = library.playlists[idx];
+        // Check duplicates
+        const exists = pl.songs.some(s => s.id === item.id || (s.url && s.url === item.url));
+        if (exists) {
+            showToast("Song already in playlist");
+        } else {
+            pl.songs.push(item);
+            pl.updatedAt = new Date().toISOString();
+            await saveLibrary();
+            showToast(`Added to ${pl.name}`);
+            renderLibrary(); // Update counts
+        }
     }
 }
 
 function updatePlayerLikeIcon() {
     if (!currentTrack) return;
     const trackUrl = currentTrack.song?.url || currentTrack.url;
-    const isLiked = library.likedSongs.some(s => (s.song?.url || s.url) === trackUrl);
+    const isLiked = library.likedSongs.some(s => {
+        const sUrl = s.song?.url || s.url;
+        const sId = s.id;
+        if (currentTrack.id && sId === currentTrack.id) return true;
+        if (trackUrl && sUrl === trackUrl) return true;
+        return false;
+    });
     playerLikeBtn.innerHTML = isLiked ? '<i class="fas fa-heart text-red-500"></i>' : '<i class="far fa-heart"></i>';
 }
 
 function renderLibrary() {
+    if (!libraryList) return;
     libraryList.innerHTML = '';
 
     // Liked Songs Item
@@ -255,7 +270,7 @@ function renderLibrary() {
 
 function openLikedSongs() {
     mainHeader.textContent = "Liked Songs";
-    contentArea.className = ''; // Remove grid class
+    contentArea.className = ''; 
     
     let html = `
         <div class="artist-header">
@@ -264,7 +279,7 @@ function openLikedSongs() {
             </div>
             <div class="artist-info">
                 <h2>Liked Songs</h2>
-                <p>${library.likedSongs.length} songs • Auto-generated</p>
+                <p>${library.likedSongs.length} songs</p>
             </div>
         </div>
         <div class="song-list">
@@ -277,21 +292,7 @@ function openLikedSongs() {
     }
 
     contentArea.innerHTML = html;
-    
-    // Attach events
-    library.likedSongs.forEach(item => {
-        const song = item.song || item;
-        const author = item.author || { name: item.primaryArtists || '' };
-        const trackUrl = song.url || item.url;
-        let uniqueId = item.id || trackUrl || (song.name + author.name);
-        if (!uniqueId) uniqueId = 'unknown'; // Fallback that is at least consistent
-        const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
-
-        const btn = document.getElementById(`play-${domId}`);
-        const likeBtn = document.getElementById(`like-${domId}`);
-        if (btn) btn.addEventListener('click', () => playSong(item));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
-    });
+    attachListEvents(library.likedSongs);
 }
 
 function openPlaylist(playlistId) {
@@ -323,20 +324,25 @@ function openPlaylist(playlistId) {
     }
 
     contentArea.innerHTML = html;
-    
-    // Attach events
-     pl.songs.forEach(item => {
+    attachListEvents(pl.songs);
+}
+
+function attachListEvents(items) {
+    items.forEach(item => {
         const song = item.song || item;
         const author = item.author || { name: item.primaryArtists || '' };
         const trackUrl = song.url || item.url;
         let uniqueId = item.id || trackUrl || (song.name + author.name);
         if (!uniqueId) uniqueId = 'unknown';
         const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
-        
+
         const btn = document.getElementById(`play-${domId}`);
         const likeBtn = document.getElementById(`like-${domId}`);
+        const addBtn = document.getElementById(`add-${domId}`);
+        
         if (btn) btn.addEventListener('click', () => playSong(item));
         if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
+        if (addBtn) addBtn.addEventListener('click', () => addToPlaylist(item));
     });
 }
 
@@ -349,11 +355,10 @@ async function handleSearch() {
     console.log(`Searching for: ${query} (Type: ${searchType})`);
 
     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
-    contentArea.className = 'photo-grid'; // Restore grid for search results
+    contentArea.className = 'photo-grid'; 
     mainHeader.textContent = `Results for "${query}"`;
 
     try {
-        // 1. Argon Search
         let argonQuery = query;
         if (searchType !== 'song') {
             argonQuery += ` ${searchType}`;
@@ -366,7 +371,6 @@ async function handleSearch() {
                 return { collection: [] };
             });
 
-        // 2. Saavn Search
         const saavnUrl = `${API_SAAVN}/search/${searchType}s?query=${encodeURIComponent(query)}`;
         const saavnPromise = fetch(saavnUrl)
             .then(res => res.ok ? res.json() : { data: [] })
@@ -379,25 +383,20 @@ async function handleSearch() {
 
         let combinedResults = [];
 
-        // Process Argon
         if (argonRes.collection && Array.isArray(argonRes.collection)) {
             combinedResults.push(...argonRes.collection);
         }
 
-        // Process Saavn
         if (saavnRes.data) {
              const saavnItems = saavnRes.data.results || saavnRes.data;
              if (Array.isArray(saavnItems)) {
                  combinedResults.push(...saavnItems);
              }
         }
-
-        console.log(`Combined results: ${combinedResults.length} items`);
         
         if (combinedResults.length > 0) {
              renderResults(combinedResults);
         } else {
-            console.log("No results found in data.collection or saavn data");
             contentArea.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 w-full">No results found.</div>';
         }
     } catch (e) {
@@ -407,7 +406,6 @@ async function handleSearch() {
 }
 
 function renderResults(results) {
-    console.log(`Rendering ${results.length} results`);
     if (!results || results.length === 0) {
         contentArea.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 w-full">No results found.</div>';
         return;
@@ -415,87 +413,77 @@ function renderResults(results) {
 
     currentResults = results; 
     contentArea.innerHTML = ''; 
-
+    // We will render cards using the new design in test.html, 
+    // but here we generate the HTML string structure expected by the redesign.
+    // However, since script.js is shared, I must output HTML that matches the CSS in test.html.
+    
+    // Grid container is already set by contentArea.className = 'photo-grid' in handleSearch.
+    // In the NEW design (games.html style), the container is a grid of cards.
+    
     results.forEach((item, idx) => {
         try {
             const card = document.createElement('div');
-            card.className = 'photo-thumbnail'; // Using the Photo Grid class
+            // Matching 'zone-item' style from games.html roughly
+            card.className = 'zone-item bg-[#111] rounded-2xl border border-[#252525] overflow-hidden relative group cursor-pointer';
             
             const imgUrl = getImageUrl(item);
             const name = item.song?.name || item.name || 'Unknown';
             const subText = item.author?.name || item.primaryArtists || '';
             
-            console.log(`Item ${idx}: Name="${name}", Sub="${subText}", Img="${imgUrl}"`);
-
+            // Using the card structure from games.html but square for music
             card.innerHTML = `
-                <img src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
-                <div class="overlay"></div>
-                <div class="title-overlay">
-                    <h3>${name}</h3>
-                    <p>${subText}</p>
+                <div class="relative w-full aspect-square">
+                    <img src="${imgUrl}" alt="${name}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80"></div>
+                    
+                    <div class="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 class="text-white font-bold truncate text-lg drop-shadow-md">${name}</h3>
+                        <p class="text-gray-400 text-sm truncate">${subText}</p>
+                    </div>
+
+                    <button class="play-overlay-btn absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/30 backdrop-blur-sm">
+                        <i class="fas fa-play text-4xl text-white drop-shadow-xl hover:scale-110 transition-transform"></i>
+                    </button>
+                    
+                    <button class="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 fav-btn" title="Like">
+                        <i class="far fa-heart"></i>
+                    </button>
+                    
+                     <button class="absolute top-2 left-2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 add-btn" title="Add to Playlist">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
             `;
 
-            card.addEventListener('click', () => {
-                playSong(item);
+            // Click on card -> Play
+            card.addEventListener('click', () => playSong(item));
+            
+            // Buttons
+            const favBtn = card.querySelector('.fav-btn');
+            favBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleLike(item);
+                // Update icon immediately for feedback
+                const icon = favBtn.querySelector('i');
+                if (icon.classList.contains('far')) {
+                    icon.classList.replace('far', 'fas');
+                    icon.classList.add('text-red-500');
+                } else {
+                    icon.classList.replace('fas', 'far');
+                    icon.classList.remove('text-red-500');
+                }
             });
+
+             const addBtn = card.querySelector('.add-btn');
+             addBtn.addEventListener('click', (e) => {
+                 e.stopPropagation();
+                 addToPlaylist(item);
+             });
 
             contentArea.appendChild(card);
         } catch (err) {
             console.error(`Error rendering item ${idx}:`, item, err);
         }
-    });
-}
-
-// Artist Details Logic (Simplified for Argon)
-async function loadArtistDetails(artistId, artistObj) {
-    contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
-    contentArea.className = ''; 
-    mainHeader.textContent = "Related Songs";
-    
-    try {
-        // Argon doesn't have artist ID lookup, using name from object if available
-        const artistName = artistObj.author?.name || artistObj.name;
-        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(artistName)}&limit=20`);
-        const data = await res.json();
-        renderResults(data.collection);
-    } catch (e) {
-        console.error(e);
-        contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
-    }
-}
-
-function renderArtistView(artist, songs) {
-    const imgUrl = getImageUrl(artist);
-
-    const html = `
-        <div class="artist-header">
-            <img src="${imgUrl}" alt="${artist.name}">
-            <div class="artist-info">
-                <h2>${artist.name}</h2>
-                <p>${artist.followerCount ? formatNumber(artist.followerCount) + ' Followers' : ''}</p>
-                <p>${artist.isVerified ? '<i class="fas fa-check-circle text-indigo-500"></i> Verified Artist' : ''}</p>
-            </div>
-        </div>
-        <div class="song-list">
-            ${songs.map(song => createSongRow(song)).join('')}
-        </div>
-    `;
-    
-    contentArea.innerHTML = html;
-
-    songs.forEach(item => {
-        const song = item.song || item;
-        const author = item.author || { name: item.primaryArtists || '' };
-        const trackUrl = song.url || item.url;
-        let uniqueId = item.id || trackUrl || (song.name + author.name);
-        if (!uniqueId) uniqueId = 'unknown';
-        const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
-
-        const btn = document.getElementById(`play-${domId}`);
-        const likeBtn = document.getElementById(`like-${domId}`);
-        if (btn) btn.addEventListener('click', () => playSong(item));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
     });
 }
 
@@ -505,55 +493,41 @@ function createSongRow(item) {
     const author = item.author || { name: item.primaryArtists || '' };
     
     const durationStr = formatTime(song.duration);
-    const trackUrl = song.url || item.url; // Kept for logic check
+    const trackUrl = song.url || item.url;
     
-    // Check if liked using ID or URL
     const isLiked = library.likedSongs.some(s => {
         const sUrl = s.song?.url || s.url;
         const sId = s.id;
-        // Check ID match (Saavn)
         if (item.id && sId === item.id) return true;
-        // Check URL match (Argon)
         if (trackUrl && sUrl === trackUrl) return true;
         return false;
     });
     
-    // Generate a safe ID for the DOM
     let uniqueId = item.id || trackUrl || (song.name + author.name);
     if (!uniqueId) uniqueId = 'unknown-' + Math.random();
     const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
 
     return `
-        <div class="song-row">
-            <img src="${imgUrl}" loading="lazy">
-            <div class="song-row-info">
-                <div class="song-row-title">${song.name}</div>
-                <div class="song-row-meta">${author.name}</div>
+        <div class="song-row flex items-center p-3 bg-[#111] hover:bg-[#1a1a1a] rounded-xl border border-[#252525] transition-colors gap-4">
+            <img src="${imgUrl}" loading="lazy" class="w-12 h-12 rounded-lg object-cover">
+            <div class="flex-grow overflow-hidden">
+                <div class="text-white font-medium truncate">${song.name}</div>
+                <div class="text-gray-500 text-xs truncate">${author.name}</div>
             </div>
-            <div class="song-row-actions flex items-center gap-4">
-                 <div class="song-row-meta">${durationStr}</div>
-                 <button id="like-${domId}" class="${isLiked ? 'liked' : ''}" title="${isLiked ? 'Unlike' : 'Like'}">
+            <div class="flex items-center gap-3">
+                 <div class="text-gray-600 text-xs">${durationStr}</div>
+                 <button id="add-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all" title="Add to Playlist">
+                    <i class="fas fa-plus"></i>
+                 </button>
+                 <button id="like-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center ${isLiked ? 'text-red-500 border-red-500' : 'text-gray-400 hover:text-white hover:border-white'} transition-all" title="${isLiked ? 'Unlike' : 'Like'}">
                     <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>
                  </button>
-                <button id="play-${domId}" title="Play"><i class="fas fa-play"></i></button>
+                <button id="play-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all" title="Play">
+                    <i class="fas fa-play"></i>
+                </button>
             </div>
         </div>
     `;
-}
-
-// Album Details (Simplified for Argon)
-async function loadAlbumDetails(albumId) {
-     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
-     contentArea.className = '';
-     mainHeader.textContent = "Related Songs";
-     try {
-        // Argon doesn't have album lookup, using search instead
-        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(albumId)}&limit=10`);
-        const data = await res.json();
-        renderResults(data.collection);
-     } catch(e) {
-          contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
-     }
 }
 
 // Player Logic
@@ -580,18 +554,13 @@ function playSong(item) {
         const possibleUrl = item.song?.url || item.url;
         
         if (possibleUrl) {
-             // 3. Saved Saavn Item or Direct Link
-             // We detect direct links by extension or known CDN domains.
-             // This prevents treating a webpage URL (like SoundCloud) as a direct audio source.
              if (typeof possibleUrl === 'string' && (possibleUrl.includes('saavncdn.com') || possibleUrl.match(/\.(mp3|mp4|m4a)$/i))) {
                  downloadUrl = possibleUrl;
              }
-             // 4. Saved Saavn Item stored as array (rare but possible in legacy)
              else if (Array.isArray(possibleUrl)) {
                  const best = possibleUrl.find(d => d.quality === '320kbps') || possibleUrl[possibleUrl.length - 1];
                  downloadUrl = best.link;
              }
-             // 5. Default: Treat as Source URL (Argon/SoundCloud/YouTube) -> Use Downloader
              else {
                  downloadUrl = `${API_BASE}/api/download?track_url=${encodeURIComponent(possibleUrl)}`;
              }
@@ -600,24 +569,30 @@ function playSong(item) {
 
     console.log(`Playing: ${songName} | URL: ${downloadUrl}`);
 
-    playerTitle.textContent = songName;
-    playerArtist.textContent = artistName;
-    playerImg.src = imgUrl;
+    if (playerTitle) playerTitle.textContent = songName;
+    if (playerArtist) playerArtist.textContent = artistName;
+    if (playerImg) playerImg.src = imgUrl;
     
-    audioPlayer.src = downloadUrl;
-    const playPromise = audioPlayer.play();
-    if (playPromise !== undefined) {
-        playPromise.catch(error => {
-            console.log("Playback interrupted or prevented:", error);
-        });
+    if (audioPlayer) {
+        audioPlayer.src = downloadUrl;
+        const playPromise = audioPlayer.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.log("Playback interrupted or prevented:", error);
+            });
+        }
     }
     updatePlayerLikeIcon();
     
-    downloadBtn.href = downloadUrl;
-    downloadBtn.setAttribute('download', `${songName}.mp3`);
+    if (downloadBtn) {
+        downloadBtn.href = downloadUrl;
+        downloadBtn.setAttribute('download', `${songName}.mp3`);
+    }
 
-    playerBar.classList.remove('hidden');
-    playerBar.style.display = 'flex'; 
+    if (playerBar) {
+        playerBar.classList.remove('hidden');
+        playerBar.style.display = 'flex'; 
+    }
 }
 
 function togglePlay() {
@@ -645,7 +620,6 @@ function updateProgress() {
     currentTimeElem.textContent = formatTime(currentTime);
 }
 
-// Helper: Get Image URL
 function getImageUrl(item) {
     if (item.song && item.song.img) {
         let img = item.song.img.big || item.song.img.small;
@@ -680,62 +654,15 @@ function formatTime(val) {
 }
 
 function formatNumber(num) {
-    if (num >= 1000000) {
-        return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-        return (num / 1000).toFixed(1) + 'K';
-    }
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
     return num;
 }
 
 function showToast(msg) {
-    // Simple toast for feedback
     const div = document.createElement('div');
-    div.className = 'fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg text-sm z-50';
+    div.className = 'fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg text-sm z-50 animate-fade-in';
     div.textContent = msg;
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 2000);
-}
-
-// Lyrics Logic (Triggered by button usually, now only via manual call if implemented elsewhere or restored)
-async function openLyrics() {
-    if (!currentTrack) return;
-
-    lyricsOverlay.classList.add('active');
-    lyricsTitle.textContent = currentTrack.name;
-    lyricsArtist.textContent = currentTrack.primaryArtists || currentTrack.artist || '';
-    lyricsText.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
-
-    const decodeHtml = (html) => {
-        const txt = document.createElement("textarea");
-        txt.innerHTML = html;
-        return txt.value;
-    };
-
-    let artistName = currentTrack.primaryArtists || currentTrack.artist || '';
-    artistName = decodeHtml(artistName);
-    if (artistName.includes(',')) artistName = artistName.split(',')[0].trim();
-    
-    let trackName = currentTrack.name;
-    trackName = decodeHtml(trackName);
-    trackName = trackName.replace(/\s*\(.*?(feat|ft|from|cover|remix).*?\)/gi, '');
-    trackName = trackName.replace(/\s*\[.*?\]/gi, ''); 
-    trackName = trackName.trim();
-
-    const url = `${LYRICS_API_BASE}?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}`;
-
-    try {
-        const res = await fetch(url);
-        const json = await res.json();
-        
-        if (json.data && json.data.lyrics) {
-            lyricsText.textContent = json.data.lyrics;
-        } else {
-            lyricsText.textContent = "Lyrics not found.";
-        }
-    } catch (e) {
-        console.error(e);
-        lyricsText.textContent = "Failed to load lyrics.";
-    }
 }

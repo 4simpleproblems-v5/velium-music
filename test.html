@@ -7,285 +7,115 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght @100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <style>
-        /* --- BASE STYLES & ANIMATIONS --- */
-        @keyframes popIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            80% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); }
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-black': '#040404',
+                        'card-dark': '#111111',
+                        'accent-indigo': '#4f46e5',
+                        'brand-border': '#252525',
+                    },
+                    fontFamily: {
+                        sans: ['Geist', 'sans-serif'],
+                    },
+                }
+            }
         }
+    </script>
 
+    <style>
         body { 
             font-family: 'Geist', sans-serif; 
             background-color: #040404; 
-            color: #c0c0c0; 
+            color: #d1d5db; 
             font-weight: 300; 
-            overflow: hidden; 
-            height: 100vh;
-            margin: 0;
+            padding-bottom: 120px; /* Space for player */
         }
 
-        h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
-            font-weight: 400 !important; 
-        }
+        /* --- Global Scrollbar --- */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
 
-        /* --- THEME BUTTONS --- */
+        /* --- Toolbar Button Style --- */
         .btn-toolbar-style {
-            background: #000000;
+            background: #000;
             border: 1px solid #333;
-            border-radius: 0.75rem;
+            border-radius: 14px;
             color: #d1d5db;
-            padding: 0.5rem 1rem;
-            font-weight: 400; /* Max 400 */
+            padding: 0.5rem 1.25rem;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
         }
         .btn-toolbar-style:hover {
             border-color: #fff;
-            color: #ffffff;
-        }
-
-        .btn-toolbar-style.active {
-            background-color: rgba(79, 70, 229, 0.1) !important;
-            border: 1px solid #4f46e5 !important;
-            color: #4f46e5 !important;
-        }
-        .btn-toolbar-style.active:hover {
-            background-color: rgba(79, 70, 229, 0.15) !important;
-            border-color: #6366f1 !important;
-            color: #6366f1 !important;
-        }
-
-        .btn-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.5rem; 
-            height: 2.5rem; 
-            border-radius: 0.5rem;
-            background-color: #000000;
-            border: 1px solid #333;
-            color: #9ca3af;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-icon:hover {
-            border-color: #fff;
             color: #fff;
+            transform: translateY(-1px);
+        }
+        .btn-toolbar-style.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            border-color: #4f46e5;
+            color: #4f46e5;
         }
 
-        /* --- LAYOUT --- */
-        .messenger-container {
-            display: flex; 
-            width: 100vw;
-            height: 100vh; 
+        /* --- Search Bar --- */
+        #search-container {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-
-        /* --- SIDEBAR --- */
-        .left-panel {
-            width: 350px;
-            background-color: #000000;
-            border-right: 1px solid #1a1a1a;
-            display: flex;
-            flex-direction: column;
-            z-index: 50;
-            flex-shrink: 0;
-        }
-
-        .left-panel-scroll-content {
-            padding: 1.5rem;
-            overflow-y: auto;
-            flex-grow: 1;
-            mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-        }
-        .left-panel-scroll-content::-webkit-scrollbar { width: 6px; }
-        .left-panel-scroll-content::-webkit-scrollbar-thumb { background-color: #333; border-radius: 3px; }
-        .left-panel-scroll-content::-webkit-scrollbar-track { background-color: #000; }
-
-        /* --- LISTS --- */
-        .compact-list-wrapper {
-             background-color: #000000;
-             border-radius: 0.75rem; 
-             border: 1px solid #1a1a1a; 
-             margin-top: 0.75rem;
-        }
-        .compact-list-items {
-            overflow-y: auto;
-            max-height: 250px; 
-            padding: 0.25rem; 
-        }
-        .compact-list-items::-webkit-scrollbar { width: 4px; }
-        .compact-list-items::-webkit-scrollbar-thumb { background-color: #4f46e5; }
-
-        .compact-list-item {
-            border-radius: 0.5rem; 
-            margin-bottom: 2px;
-            padding: 0.5rem; 
-            transition: background-color 0.2s;
-            cursor: pointer;
-        }
-        .compact-list-item:hover { background-color: #111; }
-
-        /* --- FEED PANEL --- */
-        .feed-panel { 
-            flex-grow: 1;
-            height: 100%;
-            background-color: #040404;
-            padding: 1.5rem; 
-            padding-bottom: 120px; /* Space for player */
-            overflow-y: auto; 
-            position: relative;
-        }
-
-        .feed-content-inner {
-            max-width: 1200px; 
-            margin: 0 auto; 
-        }
-
-        /* --- GRID & PHOTOS --- */
-        .photo-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            min-height: 200px;
-            border: 1px dashed #333;
-        }
-
-        .photo-thumbnail {
-            position: relative;
-            overflow: hidden;
-            border-radius: 0.75rem; /* 12px */
-            cursor: pointer;
-            /* Fixed width logic as requested */
-            width: 200px;
-            height: 200px;
-            background-color: #0a0a0a;
-            border: 1px solid #1a1a1a;
-            transition: border-color 0.2s;
-            flex-shrink: 0;
-        }
-        .photo-thumbnail:hover {
+        #search-container:focus-within {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.15);
             border-color: #4f46e5;
         }
 
-        .photo-thumbnail img {
-            width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;
-        }
-        .photo-thumbnail:hover img { transform: scale(1.05); }
-
-        .overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
-            pointer-events: none; 
-        }
-        .title-overlay {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            padding: 1rem;
-            color: white; 
-            z-index: 10;
-        }
-        .title-overlay h3 {
-            font-size: 0.9rem;
-            font-weight: 400;
-            margin: 0;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .title-overlay p {
-            font-size: 0.75rem;
-            color: #9ca3af;
-            margin: 2px 0 0 0;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-
-        /* --- ARTIST VIEW --- */
-        .artist-header {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-            padding: 2rem;
-            background: #0a0a0a;
-            border: 1px solid #1a1a1a;
-            border-radius: 1.125rem; /* 18px */
-        }
-        .artist-header img {
-            width: 150px; height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #1a1a1a;
-        }
-        .artist-info h2 { font-size: 2rem; margin-bottom: 0.5rem; color: white; }
-        .artist-info p { color: #9ca3af; }
-
-        .song-list { display: flex; flex-direction: column; gap: 0.5rem; }
-        .song-row {
-            display: flex; align-items: center;
-            padding: 0.75rem 1rem;
-            background: #000;
-            border: 1px solid #1a1a1a;
-            border-radius: 0.75rem; /* 12px */
-            transition: all 0.2s;
-        }
-        .song-row:hover { background: #111; border-color: #333; }
-        .song-row img { width: 40px; height: 40px; border-radius: 0.25rem; margin-right: 1rem; object-fit: cover; }
-        .song-row-info { flex: 1; overflow: hidden; }
-        .song-row-title { color: white; font-size: 0.9rem; font-weight: 400; truncate: true; }
-        .song-row-meta { color: #6b7280; font-size: 0.75rem; }
-        .song-row-actions button {
-            background: transparent; border: 1px solid #333; color: white;
-            width: 32px; height: 32px; border-radius: 50%;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-        }
-        .song-row-actions button:hover { background: #fff; color: #000; }
-        .song-row-actions button.liked {
-            color: #e11d48; border-color: #e11d48;
-        }
-
-
-        /* --- PLAYER BAR --- */
+        /* --- Player Bar (Translucent & Dynamic) --- */
         #player-bar {
             position: fixed;
             bottom: 0; left: 0; right: 0;
             height: 90px;
             background-color: rgba(0,0,0,0.95);
             border-top: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             z-index: 100;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 2rem;
-            transition: background-color 0.5s ease;
+            transition: background-color 0.5s ease, border-color 0.5s ease;
         }
 
         .player-info { display: flex; align-items: center; gap: 1rem; width: 300px; }
         .player-info img { 
             width: 56px; height: 56px; 
-            border-radius: 0.5rem; /* 8px */
-            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 0.5rem; 
+            border: 1px solid rgba(255,255,255,0.1);
+            object-fit: cover;
         }
         .player-text { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
-        .player-title { color: white; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         .player-artist { color: rgba(255,255,255,0.7); font-size: 0.75rem; }
 
         .custom-player-controls {
             flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; max-width: 600px;
         }
-        .control-buttons { display: flex; gap: 1.5rem; align-items: center; }
-        .player-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.25rem; cursor: pointer; transition: all 0.2s; }
+        .control-buttons { display: flex; gap: 2rem; align-items: center; }
+        .player-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.2rem; cursor: pointer; transition: all 0.2s; }
         .player-btn:hover { color: white; transform: scale(1.1); }
-        .play-btn { color: white; font-size: 2rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
+        .play-btn { color: white; font-size: 2.5rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
         .play-btn:hover { transform: scale(1.1); }
 
         .progress-container { width: 100%; display: flex; align-items: center; gap: 1rem; color: rgba(255,255,255,0.7); font-size: 0.75rem; }
@@ -302,107 +132,94 @@
         .volume-slider { width: 80px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; -webkit-appearance: none; outline: none; }
         .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: rgba(255,255,255,0.8); border-radius: 50%; }
 
-        /* --- LYRICS OVERLAY --- */
-        #lyrics-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
-            backdrop-filter: blur(20px);
-            z-index: 200;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 2rem;
-            transition: opacity 0.3s;
-            opacity: 0; pointer-events: none;
-        }
-        #lyrics-overlay.active { opacity: 1; pointer-events: auto; }
-
-        .lyrics-content { text-align: center; max-width: 800px; height: 100%; overflow-y: auto; padding: 2rem; }
-        .lyrics-content::-webkit-scrollbar { display: none; }
-        .lyrics-title { font-size: 2rem; color: white; margin-bottom: 0.5rem; }
-        .lyrics-artist { font-size: 1.25rem; color: #4f46e5; margin-bottom: 2rem; }
-        .lyrics-text { font-size: 1.5rem; line-height: 2; color: #d1d5db; white-space: pre-wrap; font-weight: 300; }
-
-        .close-lyrics {
-            position: absolute; top: 2rem; right: 2rem;
-            background: transparent; border: none; color: white; font-size: 2rem; cursor: pointer;
-        }
-
-        /* Helpers */
+        /* --- Animations --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        .loader { display: flex; justify-content: center; align-items: center; height: 200px; color: #4f46e5; }
         .hidden { display: none !important; }
-        .thin-font { font-weight: 300 !important; }
-        .loader { display: flex; justify-content: center; align-items: center; height: 100%; color: #4f46e5; }
     </style>
 </head>
-<body>
+<body class="min-h-screen">
 
-    <main class="messenger-container">
+    <!-- Top Navigation / Toolbar -->
+    <header class="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md z-40 border-b border-brand-border h-16 flex items-center justify-between px-6">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl text-white tracking-widest font-bold mr-4">VELIUM</h1>
+            
+            <label class="cursor-pointer">
+                <input type="radio" name="search-type" value="song" class="hidden peer" checked>
+                <div class="btn-toolbar-style peer-checked:active">
+                    <i class="fas fa-music"></i> Songs
+                </div>
+            </label>
+            <label class="cursor-pointer">
+                <input type="radio" name="search-type" value="album" class="hidden peer">
+                <div class="btn-toolbar-style peer-checked:active">
+                    <i class="fas fa-compact-disc"></i> Albums
+                </div>
+            </label>
+            <label class="cursor-pointer">
+                <input type="radio" name="search-type" value="artist" class="hidden peer">
+                <div class="btn-toolbar-style peer-checked:active">
+                    <i class="fas fa-microphone-lines"></i> Artists
+                </div>
+            </label>
+        </div>
+
+        <div class="flex items-center gap-3">
+             <button id="create-playlist-btn" class="btn-toolbar-style" title="New Playlist">
+                <i class="fas fa-plus"></i> New Playlist
+            </button>
+             <button id="view-library-btn" class="btn-toolbar-style" title="My Library" onclick="document.getElementById('library-drawer').classList.toggle('translate-x-full')">
+                <i class="fas fa-layer-group"></i> Library
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-24 px-4 sm:px-8 max-w-screen-2xl mx-auto">
         
-        <aside class="left-panel">
-            <div class="left-panel-scroll-content">
-                
-                <div class="mb-6 pb-4 border-b border-[#1a1a1a]">
-                    <h2 class="text-xl text-white mb-2 tracking-widest font-bold">VELIUM</h2>
-                    <p class="text-xs text-gray-500">Music Explorer</p>
-                </div>
-
-                <div class="mb-6 pb-4 border-b border-[#1a1a1a]">
-                    <h2 class="text-lg text-white mb-3">Search</h2>
-                    
-                    <div class="flex gap-2 mb-3">
-                        <input type="text" id="search-box" placeholder="Find songs, artists..." class="flex-grow p-2 bg-black border border-[#333] rounded-md outline-none focus:border-indigo-500 text-white thin-font text-sm">
-                        <button id="search-btn" class="btn-icon" title="Search"><i class="fas fa-search"></i></button>
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="search-type" value="song" class="hidden peer" checked>
-                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
-                                <i class="fas fa-music"></i> Songs
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="search-type" value="album" class="hidden peer">
-                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
-                                <i class="fas fa-compact-disc"></i> Albums
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="search-type" value="artist" class="hidden peer">
-                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
-                                <i class="fas fa-microphone-lines"></i> Artists
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-lg text-white">Library</h2>
-                        <button id="create-playlist-btn" class="text-gray-500 hover:text-white" title="New Playlist"><i class="fas fa-plus"></i></button>
-                    </div>
-                    <div id="library-list" class="compact-list-wrapper">
-                        </div>
-                </div>
-
+        <!-- Search Hero -->
+        <div class="max-w-3xl mx-auto mb-12">
+            <div id="search-container" class="relative flex items-center bg-[#111] border border-[#333] rounded-2xl p-2 group transition-all">
+                <i class="fas fa-search text-gray-500 ml-4 text-lg"></i>
+                <input type="text" id="search-box" placeholder="Search for songs, artists, or albums..." 
+                       class="w-full bg-transparent border-none outline-none text-white px-4 py-3 text-lg placeholder-gray-600 font-light">
+                <button id="search-btn" class="bg-[#222] hover:bg-[#333] text-white px-6 py-2 rounded-xl transition-colors font-medium">Search</button>
             </div>
-        </aside>
+        </div>
 
-        <section class="feed-panel">
-            <div class="feed-content-inner">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl text-white" id="main-header">Home</h1>
-                </div>
-                
-                <div id="content-area" class="photo-grid">
-                    <div class="col-span-full text-center text-gray-500 mt-20 w-full">
-                        <i class="fas fa-music text-4xl mb-4 opacity-50"></i>
-                        <p>Search for your favorite tracks or select a playlist.</p>
-                    </div>
-                </div>
+        <!-- Dynamic Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h2 id="main-header" class="text-2xl text-white font-medium">Trending</h2>
+        </div>
+
+        <!-- Content Grid (Cards) -->
+        <div id="content-area" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            <!-- Initial State -->
+            <div class="col-span-full flex flex-col items-center justify-center text-gray-500 mt-20 opacity-50">
+                <i class="fas fa-wave-square text-6xl mb-4"></i>
+                <p class="text-xl">Discover your sound.</p>
             </div>
-        </section>
+        </div>
 
     </main>
 
+    <!-- Library Drawer (Right Side) -->
+    <aside id="library-drawer" class="fixed top-0 right-0 h-full w-80 bg-[#0a0a0a] border-l border-[#252525] z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col pt-20">
+        <div class="px-6 pb-4 border-b border-[#252525] flex justify-between items-center">
+            <h2 class="text-xl text-white font-medium">Your Library</h2>
+            <button onclick="document.getElementById('library-drawer').classList.add('translate-x-full')" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="library-list" class="flex-grow overflow-y-auto p-4 space-y-2">
+            <!-- Populated by script.js -->
+        </div>
+    </aside>
+
+    <!-- Player Bar -->
     <div id="player-bar" class="hidden">
         <div class="player-info">
             <img id="player-img" src="" alt="Cover">
@@ -414,7 +231,11 @@
         
         <div class="custom-player-controls">
             <div class="control-buttons">
-                <button class="player-btn play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
+                <button class="player-btn" id="player-like-btn" title="Like"><i class="far fa-heart"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime -= 10"><i class="fas fa-backward-step text-base"></i></button>
+                <button class="play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime += 10"><i class="fas fa-forward-step text-base"></i></button>
+                <button class="player-btn" title="Lyrics" onclick="openLyrics()"><i class="fas fa-align-center"></i></button>
             </div>
             <div class="progress-container">
                 <span id="current-time">0:00</span>
@@ -427,34 +248,34 @@
              <i class="fas fa-volume-up"></i>
              <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1">
              <a href="#" id="download-btn" class="player-btn text-sm ml-2" target="_blank" title="Download"><i class="fas fa-download"></i></a>
-             <button id="player-like-btn" class="player-btn text-sm ml-2" title="Like"><i class="far fa-heart"></i></button>
         </div>
         
-        <audio id="audio-player" class="hidden"></audio>
+        <audio id="audio-player" class="hidden" crossorigin="anonymous"></audio>
     </div>
 
-    <div id="lyrics-overlay">
-        <button class="close-lyrics" id="close-lyrics"><i class="fas fa-times"></i></button>
-        <div class="lyrics-content">
-            <h2 class="lyrics-title" id="lyrics-title">Title</h2>
-            <h3 class="lyrics-artist" id="lyrics-artist">Artist</h3>
-            <div class="lyrics-text" id="lyrics-text">Loading lyrics...</div>
+    <!-- Lyrics Overlay -->
+    <div id="lyrics-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col items-center justify-center p-8">
+        <button class="close-lyrics absolute top-8 right-8 text-white text-3xl hover:text-gray-300" id="close-lyrics"><i class="fas fa-times"></i></button>
+        <div class="text-center max-w-2xl h-full overflow-y-auto no-scrollbar">
+            <h2 class="text-3xl text-white font-bold mb-2" id="lyrics-title">Title</h2>
+            <h3 class="text-xl text-indigo-400 mb-8" id="lyrics-artist">Artist</h3>
+            <div class="text-2xl text-gray-300 font-light leading-relaxed whitespace-pre-wrap" id="lyrics-text">Loading lyrics...</div>
         </div>
     </div>
 
+    <!-- DB and Script -->
+    <script src="db.js"></script>
     <script src="script.js"></script>
 
+    <!-- Dynamic Color Script (Inline from previous step) -->
     <script>
-        // --- Dynamic Color Extraction for Player Bar ---
         (function() {
             const playerImg = document.getElementById('player-img');
             const playerBar = document.getElementById('player-bar');
             
-            // Critical: Enable CORS for image manipulation
             playerImg.crossOrigin = "Anonymous";
 
             playerImg.addEventListener('load', function() {
-                // If the image is the placeholder or empty, reset
                 if (!playerImg.src || playerImg.src.includes('data:image')) {
                      playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
                      playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
@@ -463,11 +284,9 @@
 
                 try {
                     const color = getDominantColor(playerImg);
-                    // Apply the color with high opacity
                     playerBar.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.95)`;
                     playerBar.style.borderTopColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
                 } catch (e) {
-                    console.warn("Color extraction failed:", e);
                     playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
                     playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
                 }
@@ -476,46 +295,26 @@
             function getDominantColor(imgEl) {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                // Downsample for performance
                 canvas.width = 100;
                 canvas.height = 100;
                 
                 try {
                     ctx.drawImage(imgEl, 0, 0, 100, 100);
                     const imageData = ctx.getImageData(0, 0, 100, 100).data;
-                    
                     const colorCounts = {};
                     let maxScore = -1;
-                    let bestColor = {r: 20, g: 20, b: 20}; // Default dark gray
+                    let bestColor = {r: 20, g: 20, b: 20}; 
 
                     for (let i = 0; i < imageData.length; i += 4) {
-                        const r = imageData[i];
-                        const g = imageData[i + 1];
-                        const b = imageData[i + 2];
-                        const a = imageData[i + 3];
-
-                        if (a < 128) continue; // Skip transparent
-
+                        const r = imageData[i], g = imageData[i + 1], b = imageData[i + 2], a = imageData[i + 3];
+                        if (a < 128) continue; 
                         const {h, s, l} = rgbToHsl(r, g, b);
 
-                        // --- FILTERING "BAD" COLORS ---
-                        
-                        // 1. Too Gray/Desaturated (S < 0.15)
-                        //    - Exception: allow if it's really the only thing (handled by scoring)
                         if (s < 0.15) continue; 
-
-                        // 2. Too Dark or Too Light (L < 0.1 or L > 0.9)
                         if (l < 0.1 || l > 0.9) continue;
+                        if (h > 60 && h < 100 && s < 0.6 && l < 0.5) continue; // Puke green
+                        if (h >= 0 && h < 25 && l > 0.75) continue; // Pale skin/salmon
 
-                        // 3. Puke Green / Muddy Yellow (Hue ~60-100, moderate/low saturation/lightness)
-                        //    Hue 60 is Yellow, 120 is Green. "Puke" is usually darkish yellow-green.
-                        if (h > 60 && h < 100 && s < 0.6 && l < 0.5) continue;
-
-                        // 4. Light Salmon / Flesh tones that might look bad (Hue ~0-25, High Lightness)
-                        if (h >= 0 && h < 25 && l > 0.75) continue;
-
-                        // --- BUCKETING ---
-                        // Round RGB to nearest 10 to group similar colors
                         const bucketR = Math.round(r / 10) * 10;
                         const bucketG = Math.round(g / 10) * 10;
                         const bucketB = Math.round(b / 10) * 10;
@@ -527,39 +326,26 @@
                         colorCounts[key].count++;
                     }
 
-                    // --- SCORING ---
-                    // Find winner: Abundance * (Saturation^2)
-                    // We square saturation to heavily favor vibrant colors over slightly more common gray ones.
                     for (const key in colorCounts) {
                         const c = colorCounts[key];
-                        // Bonus for being reasonably bright but not washed out (L ~ 0.5 is ideal)
-                        // But primary driver is Count * Saturation
                         const score = c.count * Math.pow(c.s, 2); 
-
                         if (score > maxScore) {
                             maxScore = score;
                             bestColor = {r: c.r, g: c.g, b: c.b};
                         }
                     }
-
                     return bestColor;
-
                 } catch (e) {
-                    // Security error usually
-                    console.warn("Canvas access denied (CORS):", e);
                     return {r: 20, g: 20, b: 20};
                 }
             }
 
-            // Helper: RGB to HSL
             function rgbToHsl(r, g, b) {
                 r /= 255; g /= 255; b /= 255;
                 const max = Math.max(r, g, b), min = Math.min(r, g, b);
                 let h, s, l = (max + min) / 2;
-
-                if (max === min) {
-                    h = s = 0; // achromatic
-                } else {
+                if (max === min) h = s = 0;
+                else {
                     const d = max - min;
                     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
                     switch (max) {
