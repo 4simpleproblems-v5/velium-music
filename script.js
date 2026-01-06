@@ -9,6 +9,14 @@ let searchType = 'song';
 let lastQuery = '';
 let isPlaying = false;
 let itemToAdd = null;
+let currentPlaylistId = null; // For editing
+let isDraggingSlider = false; // For smooth seeking
+
+// Cropper State
+let cropperImage = null;
+let cropState = { x: 0, y: 0, radius: 100 };
+let isDraggingCrop = false;
+let dragStart = { x: 0, y: 0 };
 
 // Library State
 let library = {
@@ -16,11 +24,13 @@ let library = {
     playlists: []
 };
 
-// DOM Elements (assigned in initApp to ensure they exist)
+// DOM Elements
 let searchBox, searchBtn, contentArea, playerBar, audioPlayer, playerImg, playerTitle, playerArtist;
 let downloadBtn, playerLikeBtn, lyricsOverlay, closeLyricsBtn, lyricsTitle, lyricsArtist, lyricsText;
 let mainHeader, libraryList, createPlaylistBtn, playPauseBtn, seekSlider, currentTimeElem;
 let totalDurationElem, volumeSlider;
+// New DOM Elements
+let editPlaylistNameInput, playlistCoverInput, cropperCanvas;
 
 const GRID_CLASS = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6';
 
@@ -49,12 +59,16 @@ async function initApp() {
         lyricsText = document.getElementById('lyrics-text');
         mainHeader = document.getElementById('main-header');
         libraryList = document.getElementById('library-list');
-        createPlaylistBtn = document.getElementById('create-playlist-btn'); // Might be null if using onclick
+        createPlaylistBtn = document.getElementById('create-playlist-btn');
         playPauseBtn = document.getElementById('play-pause-btn');
         seekSlider = document.getElementById('seek-slider');
         currentTimeElem = document.getElementById('current-time');
         totalDurationElem = document.getElementById('total-duration');
         volumeSlider = document.getElementById('volume-slider');
+        
+        editPlaylistNameInput = document.getElementById('edit-playlist-name');
+        playlistCoverInput = document.getElementById('playlist-cover-input');
+        cropperCanvas = document.getElementById('cropperCanvas');
 
         // Event Listeners
         if (searchBtn) searchBtn.addEventListener('click', handleSearch);
@@ -76,7 +90,7 @@ async function initApp() {
             audioPlayer.addEventListener('timeupdate', updateProgress);
             audioPlayer.addEventListener('loadedmetadata', () => {
                 if (totalDurationElem) totalDurationElem.textContent = formatTime(audioPlayer.duration);
-                if (seekSlider) seekSlider.max = Math.floor(audioPlayer.duration);
+                if (seekSlider) seekSlider.max = audioPlayer.duration; // Use float max
             });
             audioPlayer.addEventListener('ended', () => {
                 isPlaying = false;
@@ -87,8 +101,32 @@ async function initApp() {
             audioPlayer.addEventListener('pause', () => { isPlaying = false; updatePlayBtn(); });
         }
 
-        if (seekSlider) seekSlider.addEventListener('input', () => { if (audioPlayer) audioPlayer.currentTime = seekSlider.value; });
+        if (seekSlider) {
+            seekSlider.addEventListener('input', () => { 
+                isDraggingSlider = true;
+                if (currentTimeElem) currentTimeElem.textContent = formatTime(seekSlider.value);
+            });
+            seekSlider.addEventListener('change', () => {
+                if (audioPlayer) audioPlayer.currentTime = seekSlider.value;
+                isDraggingSlider = false;
+            });
+        }
+        
         if (volumeSlider) volumeSlider.addEventListener('input', (e) => { if (audioPlayer) audioPlayer.volume = e.target.value; });
+
+        // Cropper Image Input
+        if (playlistCoverInput) {
+            playlistCoverInput.addEventListener('change', handleImageUpload);
+        }
+        
+        // Cropper Interaction
+        if (cropperCanvas) {
+            cropperCanvas.addEventListener('mousedown', e => handleCropStart(e.offsetX, e.offsetY));
+            cropperCanvas.addEventListener('mousemove', e => handleCropMove(e.offsetX, e.offsetY));
+            cropperCanvas.addEventListener('mouseup', handleCropEnd);
+            cropperCanvas.addEventListener('mouseleave', handleCropEnd);
+            cropperCanvas.addEventListener('wheel', handleCropScroll);
+        }
 
         // Load Data
         await loadLibrary();
@@ -125,7 +163,6 @@ async function saveLibrary() {
 }
 
 // --- Modals & UI ---
-// Make these available globally for HTML onclick attributes
 window.openCreatePlaylistModal = function() {
     const modal = document.getElementById('create-playlist-modal');
     const input = document.getElementById('new-playlist-name');
@@ -144,6 +181,7 @@ window.confirmCreatePlaylist = async function() {
             id: 'pl-' + Date.now(),
             name: name,
             songs: [],
+            cover: null, // Custom cover
             updatedAt: new Date().toISOString()
         };
         library.playlists.push(newPlaylist);
@@ -157,9 +195,210 @@ window.confirmCreatePlaylist = async function() {
 window.closeModals = function() {
     document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active'));
     itemToAdd = null;
+    currentPlaylistId = null;
 };
 
+// --- Playlist Editing ---
+window.openEditPlaylistModal = function() {
+    if (!currentPlaylistId) return;
+    const pl = library.playlists.find(p => p.id === currentPlaylistId);
+    if (!pl) return;
+
+    const modal = document.getElementById('edit-playlist-modal');
+    if (editPlaylistNameInput) editPlaylistNameInput.value = pl.name;
+    
+    if (modal) modal.classList.add('active');
+};
+
+window.savePlaylistChanges = async function() {
+    if (!currentPlaylistId) return;
+    const plIndex = library.playlists.findIndex(p => p.id === currentPlaylistId);
+    if (plIndex === -1) return;
+
+    const newName = editPlaylistNameInput.value.trim();
+    if (newName) {
+        library.playlists[plIndex].name = newName;
+        library.playlists[plIndex].updatedAt = new Date().toISOString();
+        await saveLibrary();
+        renderLibrary();
+        openPlaylist(currentPlaylistId); // Refresh view
+        closeModals();
+        showToast("Playlist updated");
+    }
+};
+
+window.deletePlaylist = async function() {
+    if (!currentPlaylistId) return;
+    if (confirm("Are you sure you want to delete this playlist?")) {
+        library.playlists = library.playlists.filter(p => p.id !== currentPlaylistId);
+        await saveLibrary();
+        renderLibrary();
+        closeModals();
+        showHome();
+        showToast("Playlist deleted");
+    }
+};
+
+window.triggerCoverUpload = function() {
+    if (playlistCoverInput) playlistCoverInput.click();
+};
+
+// --- Cropper Logic ---
+function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+        alert('File too large (max 2MB).');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        cropperImage = new Image();
+        cropperImage.onload = () => {
+            initCropper();
+        };
+        cropperImage.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function initCropper() {
+    const modal = document.getElementById('cropper-modal');
+    const fixedHeight = 400;
+    const scale = fixedHeight / cropperImage.height;
+    cropperCanvas.height = fixedHeight;
+    cropperCanvas.width = cropperImage.width * scale;
+    
+    cropState = {
+        x: cropperCanvas.width / 2,
+        y: cropperCanvas.height / 2,
+        radius: Math.min(cropperCanvas.width, cropperCanvas.height) / 3
+    };
+    
+    modal.classList.add('active');
+    // Hide edit modal temporarily? Or overlay it. Z-index handles it.
+    requestAnimationFrame(drawCropper);
+}
+
+window.closeCropper = function() {
+    document.getElementById('cropper-modal').classList.remove('active');
+    if (playlistCoverInput) playlistCoverInput.value = '';
+};
+
+const drawCropper = () => {
+    if (!cropperImage) return;
+    const ctx = cropperCanvas.getContext('2d');
+    const w = cropperCanvas.width;
+    const h = cropperCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    
+    ctx.drawImage(cropperImage, 0, 0, w, h);
+    
+    // Overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI, true);
+    ctx.fill();
+    
+    // Border
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.setLineDash([]);
+};
+
+const handleCropStart = (x, y) => {
+    const dx = x - cropState.x;
+    const dy = y - cropState.y;
+    if (dx*dx + dy*dy < cropState.radius * cropState.radius) {
+        isDraggingCrop = true;
+        dragStart = { x, y };
+    }
+};
+
+const handleCropMove = (x, y) => {
+    if (isDraggingCrop) {
+        const dx = x - dragStart.x;
+        const dy = y - dragStart.y;
+        
+        let newX = cropState.x + dx;
+        let newY = cropState.y + dy;
+        
+        const r = cropState.radius;
+        const w = cropperCanvas.width;
+        const h = cropperCanvas.height;
+        
+        newX = Math.max(r, Math.min(newX, w - r));
+        newY = Math.max(r, Math.min(newY, h - r));
+        
+        cropState.x = newX;
+        cropState.y = newY;
+        
+        dragStart = { x, y };
+        requestAnimationFrame(drawCropper);
+    }
+};
+
+const handleCropEnd = () => { isDraggingCrop = false; };
+
+const handleCropScroll = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -5 : 5;
+    let newRadius = cropState.radius + delta;
+    const w = cropperCanvas.width;
+    const h = cropperCanvas.height;
+    const maxPossibleRadius = Math.min(w, h) / 2;
+    newRadius = Math.max(20, Math.min(newRadius, maxPossibleRadius));
+    
+    cropState.radius = newRadius;
+    
+    // Clamp center so circle stays in bounds
+    const r = newRadius;
+    cropState.x = Math.max(r, Math.min(cropState.x, w - r));
+    cropState.y = Math.max(r, Math.min(cropState.y, h - r));
+    
+    requestAnimationFrame(drawCropper);
+};
+
+window.submitCrop = async function() {
+    const tempCanvas = document.createElement('canvas');
+    const size = 300; // Standardize cover size
+    tempCanvas.width = size;
+    tempCanvas.height = size;
+    const tCtx = tempCanvas.getContext('2d');
+    
+    const scale = cropperCanvas.height / cropperImage.height;
+    const sourceX = (cropState.x - cropState.radius) / scale;
+    const sourceY = (cropState.y - cropState.radius) / scale;
+    const sourceSize = (cropState.radius * 2) / scale;
+    
+    tCtx.drawImage(cropperImage, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
+    const base64 = tempCanvas.toDataURL('image/jpeg', 0.8);
+    
+    // Save to current playlist
+    if (currentPlaylistId) {
+        const plIndex = library.playlists.findIndex(p => p.id === currentPlaylistId);
+        if (plIndex !== -1) {
+            library.playlists[plIndex].cover = base64;
+            library.playlists[plIndex].updatedAt = new Date().toISOString();
+            await saveLibrary();
+            renderLibrary();
+            openPlaylist(currentPlaylistId);
+        }
+    }
+    
+    closeCropper();
+    // Keep edit modal open to confirm other changes
+};
+
+// --- Navigation ---
 window.showHome = function() {
+    currentPlaylistId = null;
     mainHeader.textContent = "Home";
     contentArea.className = GRID_CLASS;
     contentArea.innerHTML = `
@@ -171,6 +410,7 @@ window.showHome = function() {
 };
 
 window.handleSearch = async function() {
+    currentPlaylistId = null;
     const query = searchBox ? searchBox.value.trim() : '';
     if (!query) return;
     lastQuery = query;
@@ -229,6 +469,7 @@ window.handleSearch = async function() {
 };
 
 window.openLikedSongs = function() {
+    currentPlaylistId = null;
     mainHeader.textContent = "Liked Songs";
     contentArea.className = ''; 
     
@@ -256,6 +497,7 @@ window.openLikedSongs = function() {
 };
 
 window.openPlaylist = function(playlistId) {
+    currentPlaylistId = playlistId;
     const pl = library.playlists.find(p => p.id === playlistId);
     if (!pl) return;
 
@@ -263,15 +505,28 @@ window.openPlaylist = function(playlistId) {
     contentArea.className = '';
 
     const lastUpdated = new Date(pl.updatedAt).toLocaleDateString();
-
-    let html = `
-        <div class="artist-header">
+    
+    // Determine cover
+    let coverHtml = '';
+    if (pl.cover) {
+        coverHtml = `<img src="${pl.cover}" class="w-32 h-32 rounded-lg object-cover shadow-lg border border-[#333]">`;
+    } else {
+        coverHtml = `
             <div class="w-32 h-32 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center text-white text-4xl shadow-lg">
                 <i class="fas fa-music"></i>
             </div>
+        `;
+    }
+
+    let html = `
+        <div class="artist-header relative group">
+            ${coverHtml}
             <div class="artist-info">
                 <h2>${pl.name}</h2>
                 <p>${pl.songs.length} songs • Updated: ${lastUpdated}</p>
+                <button onclick="openEditPlaylistModal()" class="mt-2 text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                    <i class="fas fa-pen"></i> Edit Playlist
+                </button>
             </div>
         </div>
         <div class="song-list">
@@ -341,7 +596,6 @@ async function toggleLike(item) {
         library.likedSongs.splice(index, 1);
         showToast("Removed from Liked Songs");
     } else {
-        // Fix for persistence: Ensure we save enough data to play it back later
         let cleanItem = { ...item }; 
         if (!cleanItem.downloadUrl && !cleanItem.url && cleanItem.song?.url) {
             cleanItem.url = cleanItem.song.url;
@@ -391,6 +645,10 @@ async function confirmAddToPlaylist(playlist) {
         await saveLibrary();
         showToast(`Added to ${playlist.name}`);
         renderLibrary();
+        // If we are currently viewing this playlist, refresh it
+        if (currentPlaylistId === playlist.id) {
+            openPlaylist(playlist.id);
+        }
     }
     closeModals();
 }
@@ -438,7 +696,9 @@ function renderLibrary() {
         div.className = 'compact-list-item flex items-center gap-2 p-2';
         
         let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-        if (pl.songs.length > 0) {
+        if (pl.cover) {
+            plCover = pl.cover;
+        } else if (pl.songs.length > 0) {
              plCover = getImageUrl(pl.songs[0]);
         }
 
@@ -625,7 +885,6 @@ function playSong(item) {
     if (playerArtist) playerArtist.textContent = artistName;
     if (playerImg) playerImg.src = imgUrl;
     
-    // Call this before using audioPlayer to ensure UI is updated even if play fails
     updatePlayerLikeIcon();
 
     if (audioPlayer) {
@@ -672,8 +931,12 @@ function updateProgress() {
     const { currentTime, duration } = audioPlayer;
     if (isNaN(duration)) return;
     
-    if (seekSlider) seekSlider.value = currentTime;
-    if (currentTimeElem) currentTimeElem.textContent = formatTime(currentTime);
+    if (seekSlider && !isDraggingSlider) {
+        seekSlider.value = currentTime;
+    }
+    if (currentTimeElem && !isDraggingSlider) {
+        currentTimeElem.textContent = formatTime(currentTime);
+    }
 }
 
 function getImageUrl(item) {
