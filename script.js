@@ -342,12 +342,16 @@ async function handleSearch() {
     mainHeader.textContent = `Results for "${query}"`;
 
     try {
-        let url = `${API_BASE}/api/search?query=${encodeURIComponent(query)}&limit=20`;
+        let finalQuery = query;
+        if (searchType !== 'song') {
+            finalQuery += ` ${searchType}`;
+        }
+        let url = `${API_BASE}/api/search?query=${encodeURIComponent(finalQuery)}&limit=20`;
         console.log(`Fetching: ${url}`);
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
-        console.log("Search results:", data);
+        console.log("Search results data:", data);
         
         if (data.collection && data.collection.length > 0) {
              renderResults(data.collection);
@@ -377,9 +381,10 @@ function renderResults(results) {
             card.className = 'photo-thumbnail'; // Using the Photo Grid class
             
             const imgUrl = getImageUrl(item);
-            
             const name = item.song?.name || item.name || 'Unknown';
             const subText = item.author?.name || item.primaryArtists || '';
+            
+            console.log(`Item ${idx}: Name="${name}", Sub="${subText}", Img="${imgUrl}"`);
 
             card.innerHTML = `
                 <img src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
@@ -510,7 +515,12 @@ function playSong(item) {
     playerImg.src = imgUrl;
     
     audioPlayer.src = downloadUrl;
-    audioPlayer.play();
+    const playPromise = audioPlayer.play();
+    if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            console.log("Playback interrupted or prevented:", error);
+        });
+    }
     updatePlayerLikeIcon();
     
     downloadBtn.href = downloadUrl;

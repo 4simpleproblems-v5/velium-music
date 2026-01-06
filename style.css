@@ -145,6 +145,8 @@ h1, h2, h3, .font-bold, .font-semibold, strong, .tracking-widest {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
+    min-height: 200px;
+    border: 1px dashed #333;
 }
 
 .photo-thumbnail {
