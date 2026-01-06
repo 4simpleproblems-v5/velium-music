@@ -43,6 +43,8 @@ const currentTimeElem = document.getElementById('current-time');
 const totalDurationElem = document.getElementById('total-duration');
 const volumeSlider = document.getElementById('volume-slider');
 
+const GRID_CLASS = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6';
+
 // Initialization
 (async function init() {
     try {
@@ -355,7 +357,7 @@ async function handleSearch() {
     console.log(`Searching for: ${query} (Type: ${searchType})`);
 
     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
-    contentArea.className = 'photo-grid'; 
+    contentArea.className = GRID_CLASS; 
     mainHeader.textContent = `Results for "${query}"`;
 
     try {
@@ -413,12 +415,6 @@ function renderResults(results) {
 
     currentResults = results; 
     contentArea.innerHTML = ''; 
-    // We will render cards using the new design in test.html, 
-    // but here we generate the HTML string structure expected by the redesign.
-    // However, since script.js is shared, I must output HTML that matches the CSS in test.html.
-    
-    // Grid container is already set by contentArea.className = 'photo-grid' in handleSearch.
-    // In the NEW design (games.html style), the container is a grid of cards.
     
     results.forEach((item, idx) => {
         try {
@@ -487,182 +483,111 @@ function renderResults(results) {
     });
 }
 
+// Artist Details Logic (Simplified for Argon)
+async function loadArtistDetails(artistId, artistObj) {
+    contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
+    contentArea.className = GRID_CLASS; 
+    mainHeader.textContent = "Related Songs";
+    
+    try {
+        // Argon doesn't have artist ID lookup, using name from object if available
+        const artistName = artistObj.author?.name || artistObj.name;
+        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(artistName)}&limit=20`);
+        const data = await res.json();
+        renderResults(data.collection);
+    } catch (e) {
+        console.error(e);
+        contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
+    }
+}
+
+function renderArtistView(artist, songs) {
+    const imgUrl = getImageUrl(artist);
+
+    const html = `
+        <div class="artist-header">
+            <img src="${imgUrl}" alt="${artist.name}">
+            <div class="artist-info">
+                <h2>${artist.name}</h2>
+                <p>${artist.followerCount ? formatNumber(artist.followerCount) + ' Followers' : ''}</p>
+                <p>${artist.isVerified ? '<i class="fas fa-check-circle text-indigo-500"></i> Verified Artist' : ''}</p>
+            </div>
+        </div>
+        <div class="song-list">
+            ${songs.map(song => createSongRow(song)).join('')}
+        </div>
+    `;
+    
+    contentArea.innerHTML = html;
+
+    songs.forEach(item => {
+        const song = item.song || item;
+        const author = item.author || { name: item.primaryArtists || '' };
+        const trackUrl = song.url || item.url;
+        let uniqueId = item.id || trackUrl || (song.name + author.name);
+        if (!uniqueId) uniqueId = 'unknown';
+        const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
+
+        const btn = document.getElementById(`play-${domId}`);
+        const likeBtn = document.getElementById(`like-${domId}`);
+        if (btn) btn.addEventListener('click', () => playSong(item));
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
+    });
+}
+
 function createSongRow(item) {
     const imgUrl = getImageUrl(item);
     const song = item.song || item;
     const author = item.author || { name: item.primaryArtists || '' };
     
     const durationStr = formatTime(song.duration);
-    const trackUrl = song.url || item.url;
+    const trackUrl = song.url || item.url; // Kept for logic check
     
+    // Check if liked using ID or URL
     const isLiked = library.likedSongs.some(s => {
         const sUrl = s.song?.url || s.url;
         const sId = s.id;
+        // Check ID match (Saavn)
         if (item.id && sId === item.id) return true;
+        // Check URL match (Argon)
         if (trackUrl && sUrl === trackUrl) return true;
         return false;
     });
     
+    // Generate a safe ID for the DOM
     let uniqueId = item.id || trackUrl || (song.name + author.name);
     if (!uniqueId) uniqueId = 'unknown-' + Math.random();
     const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
 
     return `
-        <div class="song-row flex items-center p-3 bg-[#111] hover:bg-[#1a1a1a] rounded-xl border border-[#252525] transition-colors gap-4">
-            <img src="${imgUrl}" loading="lazy" class="w-12 h-12 rounded-lg object-cover">
-            <div class="flex-grow overflow-hidden">
-                <div class="text-white font-medium truncate">${song.name}</div>
-                <div class="text-gray-500 text-xs truncate">${author.name}</div>
+        <div class="song-row">
+            <img src="${imgUrl}" loading="lazy">
+            <div class="song-row-info">
+                <div class="song-row-title">${song.name}</div>
+                <div class="song-row-meta">${author.name}</div>
             </div>
-            <div class="flex items-center gap-3">
-                 <div class="text-gray-600 text-xs">${durationStr}</div>
-                 <button id="add-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all" title="Add to Playlist">
-                    <i class="fas fa-plus"></i>
-                 </button>
-                 <button id="like-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center ${isLiked ? 'text-red-500 border-red-500' : 'text-gray-400 hover:text-white hover:border-white'} transition-all" title="${isLiked ? 'Unlike' : 'Like'}">
+            <div class="song-row-actions flex items-center gap-4">
+                 <div class="song-row-meta">${durationStr}</div>
+                 <button id="like-${domId}" class="${isLiked ? 'liked' : ''}" title="${isLiked ? 'Unlike' : 'Like'}">
                     <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>
                  </button>
-                <button id="play-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all" title="Play">
-                    <i class="fas fa-play"></i>
-                </button>
+                <button id="play-${domId}" title="Play"><i class="fas fa-play"></i></button>
             </div>
         </div>
     `;
 }
 
-// Player Logic
-function playSong(item) {
-    currentTrack = item;
-    
-    const imgUrl = getImageUrl(item);
-    const songName = item.song?.name || item.name || 'Unknown';
-    const artistName = item.author?.name || item.primaryArtists || '';
-
-    let downloadUrl = '';
-
-    // 1. Explicit Download URL (Saavn fresh result)
-    if (item.downloadUrl && Array.isArray(item.downloadUrl)) {
-        const best = item.downloadUrl.find(d => d.quality === '320kbps') || item.downloadUrl[item.downloadUrl.length - 1];
-        downloadUrl = best.link;
-    }
-    // 2. Explicit Download URL (Saavn string legacy/fallback)
-    else if (typeof item.downloadUrl === 'string') {
-        downloadUrl = item.downloadUrl;
-    }
-    else {
-        // Check potential URL fields
-        const possibleUrl = item.song?.url || item.url;
-        
-        if (possibleUrl) {
-             if (typeof possibleUrl === 'string' && (possibleUrl.includes('saavncdn.com') || possibleUrl.match(/\.(mp3|mp4|m4a)$/i))) {
-                 downloadUrl = possibleUrl;
-             }
-             else if (Array.isArray(possibleUrl)) {
-                 const best = possibleUrl.find(d => d.quality === '320kbps') || possibleUrl[possibleUrl.length - 1];
-                 downloadUrl = best.link;
-             }
-             else {
-                 downloadUrl = `${API_BASE}/api/download?track_url=${encodeURIComponent(possibleUrl)}`;
-             }
-        }
-    }
-
-    console.log(`Playing: ${songName} | URL: ${downloadUrl}`);
-
-    if (playerTitle) playerTitle.textContent = songName;
-    if (playerArtist) playerArtist.textContent = artistName;
-    if (playerImg) playerImg.src = imgUrl;
-    
-    if (audioPlayer) {
-        audioPlayer.src = downloadUrl;
-        const playPromise = audioPlayer.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.log("Playback interrupted or prevented:", error);
-            });
-        }
-    }
-    updatePlayerLikeIcon();
-    
-    if (downloadBtn) {
-        downloadBtn.href = downloadUrl;
-        downloadBtn.setAttribute('download', `${songName}.mp3`);
-    }
-
-    if (playerBar) {
-        playerBar.classList.remove('hidden');
-        playerBar.style.display = 'flex'; 
-    }
-}
-
-function togglePlay() {
-    if (audioPlayer.paused) {
-        audioPlayer.play();
-    } else {
-        audioPlayer.pause();
-    }
-}
-
-function updatePlayBtn() {
-    if (isPlaying) {
-        playPauseBtn.innerHTML = '<i class="fas fa-pause-circle"></i>';
-    } else {
-        playPauseBtn.innerHTML = '<i class="fas fa-play-circle"></i>';
-    }
-}
-
-function updateProgress() {
-    const { currentTime, duration } = audioPlayer;
-    if (isNaN(duration)) return;
-    
-    const progressPercent = (currentTime / duration) * 100;
-    seekSlider.value = currentTime;
-    currentTimeElem.textContent = formatTime(currentTime);
-}
-
-function getImageUrl(item) {
-    if (item.song && item.song.img) {
-        let img = item.song.img.big || item.song.img.small;
-        if (img.startsWith('/api/')) {
-            return API_BASE + img;
-        }
-        return img;
-    }
-    if (item.image) {
-        if (Array.isArray(item.image)) {
-            return item.image[item.image.length - 1].link; 
-        } else if (typeof item.image === 'string') {
-            return item.image;
-        }
-    }
-    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-}
-
-function formatTime(val) {
-    if (typeof val === 'object' && val !== null) {
-        const h = val.hours || 0;
-        const m = val.minutes || 0;
-        const s = val.seconds || 0;
-        const totalSec = h * 3600 + m * 60 + s;
-        const displayMin = Math.floor(totalSec / 60);
-        const displaySec = totalSec % 60;
-        return `${displayMin}:${displaySec < 10 ? '0' : ''}${displaySec}`;
-    }
-    const min = Math.floor(val / 60) || 0;
-    const sec = Math.floor(val % 60) || 0;
-    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
-}
-
-function formatNumber(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num;
-}
-
-function showToast(msg) {
-    const div = document.createElement('div');
-    div.className = 'fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg text-sm z-50 animate-fade-in';
-    div.textContent = msg;
-    document.body.appendChild(div);
-    setTimeout(() => div.remove(), 2000);
+// Album Details (Simplified for Argon)
+async function loadAlbumDetails(albumId) {
+     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
+     contentArea.className = GRID_CLASS;
+     mainHeader.textContent = "Related Songs";
+     try {
+        // Argon doesn't have album lookup, using search instead
+        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(albumId)}&limit=10`);
+        const data = await res.json();
+        renderResults(data.collection);
+     } catch(e) {
+          contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
+     }
 }
