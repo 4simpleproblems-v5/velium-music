@@ -566,30 +566,39 @@ function playSong(item) {
 
     let downloadUrl = '';
 
-    // Saavn Logic (Fresh search result)
-    if (item.downloadUrl) {
-        if (Array.isArray(item.downloadUrl)) {
-             const best = item.downloadUrl.find(d => d.quality === '320kbps') || item.downloadUrl[item.downloadUrl.length - 1];
-             downloadUrl = best.link;
-        } else {
-             downloadUrl = item.downloadUrl;
-        }
-    } 
-    // Argon Logic OR Saved Saavn Item
+    // 1. Explicit Download URL (Saavn fresh result)
+    if (item.downloadUrl && Array.isArray(item.downloadUrl)) {
+        const best = item.downloadUrl.find(d => d.quality === '320kbps') || item.downloadUrl[item.downloadUrl.length - 1];
+        downloadUrl = best.link;
+    }
+    // 2. Explicit Download URL (Saavn string legacy/fallback)
+    else if (typeof item.downloadUrl === 'string') {
+        downloadUrl = item.downloadUrl;
+    }
     else {
-        const trackUrl = item.song?.url || item.url;
-        if (trackUrl) {
-            if (Array.isArray(trackUrl)) {
-                 const best = trackUrl.find(d => d.quality === '320kbps') || trackUrl[trackUrl.length - 1];
+        // Check potential URL fields
+        const possibleUrl = item.song?.url || item.url;
+        
+        if (possibleUrl) {
+             // 3. Saved Saavn Item or Direct Link
+             // We detect direct links by extension or known CDN domains.
+             // This prevents treating a webpage URL (like SoundCloud) as a direct audio source.
+             if (typeof possibleUrl === 'string' && (possibleUrl.includes('saavncdn.com') || possibleUrl.match(/\.(mp3|mp4|m4a)$/i))) {
+                 downloadUrl = possibleUrl;
+             }
+             // 4. Saved Saavn Item stored as array (rare but possible in legacy)
+             else if (Array.isArray(possibleUrl)) {
+                 const best = possibleUrl.find(d => d.quality === '320kbps') || possibleUrl[possibleUrl.length - 1];
                  downloadUrl = best.link;
-            }
-            else if (typeof trackUrl === 'string' && trackUrl.startsWith('http')) {
-                downloadUrl = trackUrl;
-            } else {
-                downloadUrl = `${API_BASE}/api/download?track_url=${encodeURIComponent(trackUrl)}`;
-            }
+             }
+             // 5. Default: Treat as Source URL (Argon/SoundCloud/YouTube) -> Use Downloader
+             else {
+                 downloadUrl = `${API_BASE}/api/download?track_url=${encodeURIComponent(possibleUrl)}`;
+             }
         }
     }
+
+    console.log(`Playing: ${songName} | URL: ${downloadUrl}`);
 
     playerTitle.textContent = songName;
     playerArtist.textContent = artistName;

@@ -259,7 +259,7 @@
             bottom: 0; left: 0; right: 0;
             height: 90px;
             background-color: rgba(0,0,0,0.95);
-            border-top: 1px solid #1a1a1a;
+            border-top: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
             z-index: 100;
             display: flex;
@@ -273,24 +273,24 @@
         .player-info img { 
             width: 56px; height: 56px; 
             border-radius: 0.5rem; /* 8px */
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.2);
         }
         .player-text { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
-        .player-title { color: white; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .player-artist { color: #6b7280; font-size: 0.75rem; }
+        .player-title { color: white; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .player-artist { color: rgba(255,255,255,0.7); font-size: 0.75rem; }
 
         .custom-player-controls {
             flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; max-width: 600px;
         }
         .control-buttons { display: flex; gap: 1.5rem; align-items: center; }
-        .player-btn { background: none; border: none; color: #9ca3af; font-size: 1.25rem; cursor: pointer; transition: color 0.2s; }
-        .player-btn:hover { color: white; }
+        .player-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.25rem; cursor: pointer; transition: all 0.2s; }
+        .player-btn:hover { color: white; transform: scale(1.1); }
         .play-btn { color: white; font-size: 2rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
         .play-btn:hover { transform: scale(1.1); }
 
-        .progress-container { width: 100%; display: flex; align-items: center; gap: 1rem; color: #6b7280; font-size: 0.75rem; }
+        .progress-container { width: 100%; display: flex; align-items: center; gap: 1rem; color: rgba(255,255,255,0.7); font-size: 0.75rem; }
         .progress-bar {
-            flex: 1; height: 4px; background: #333; border-radius: 2px;
+            flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;
             -webkit-appearance: none; outline: none; cursor: pointer;
         }
         .progress-bar::-webkit-slider-thumb {
@@ -298,9 +298,9 @@
         }
         .progress-container:hover .progress-bar::-webkit-slider-thumb { opacity: 1; }
 
-        .volume-controls { display: flex; align-items: center; gap: 1rem; width: 200px; justify-content: flex-end; color: #9ca3af; }
-        .volume-slider { width: 80px; height: 4px; background: #333; border-radius: 2px; -webkit-appearance: none; outline: none; }
-        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: #9ca3af; border-radius: 50%; }
+        .volume-controls { display: flex; align-items: center; gap: 1rem; width: 200px; justify-content: flex-end; color: rgba(255,255,255,0.6); }
+        .volume-slider { width: 80px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; -webkit-appearance: none; outline: none; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: rgba(255,255,255,0.8); border-radius: 50%; }
 
         /* --- LYRICS OVERLAY --- */
         #lyrics-overlay {
@@ -457,69 +457,119 @@
                 // If the image is the placeholder or empty, reset
                 if (!playerImg.src || playerImg.src.includes('data:image')) {
                      playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
+                     playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
                      return;
                 }
 
                 try {
-                    const color = getAverageRGB(playerImg);
+                    const color = getDominantColor(playerImg);
                     // Apply the color with high opacity
                     playerBar.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.95)`;
-                    // Add a nice top border
-                    playerBar.style.borderTop = `1px solid rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
-                    
-                    // Optional: Determine if dark or light to adjust text color?
-                    // For now, text is white/gray, so we assume covers are generally not pure white.
-                    // If needed, we could calculate luminance.
+                    playerBar.style.borderTopColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
                 } catch (e) {
-                    // CORS errors or other issues
                     console.warn("Color extraction failed:", e);
                     playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
-                    playerBar.style.borderTop = '1px solid #1a1a1a';
+                    playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
                 }
             });
 
-            function getAverageRGB(imgEl) {
-                const blockSize = 5; // only visit every 5 pixels
-                const defaultRGB = {r:0, g:0, b:0}; // for non-supporting envs
+            function getDominantColor(imgEl) {
                 const canvas = document.createElement('canvas');
-                const context = canvas.getContext && canvas.getContext('2d');
-                let data, width, height;
-                let i = -4;
-                let length;
-                let rgb = {r:0, g:0, b:0};
-                let count = 0;
-
-                if (!context) {
-                    return defaultRGB;
-                }
-
-                height = canvas.height = imgEl.naturalHeight || imgEl.offsetHeight || 100;
-                width = canvas.width = imgEl.naturalWidth || imgEl.offsetWidth || 100;
-
-                context.drawImage(imgEl, 0, 0);
-
+                const ctx = canvas.getContext('2d');
+                // Downsample for performance
+                canvas.width = 100;
+                canvas.height = 100;
+                
                 try {
-                    data = context.getImageData(0, 0, width, height);
-                } catch(e) {
-                    /* security error, img on diff domain */
-                    throw e; 
+                    ctx.drawImage(imgEl, 0, 0, 100, 100);
+                    const imageData = ctx.getImageData(0, 0, 100, 100).data;
+                    
+                    const colorCounts = {};
+                    let maxScore = -1;
+                    let bestColor = {r: 20, g: 20, b: 20}; // Default dark gray
+
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        const r = imageData[i];
+                        const g = imageData[i + 1];
+                        const b = imageData[i + 2];
+                        const a = imageData[i + 3];
+
+                        if (a < 128) continue; // Skip transparent
+
+                        const {h, s, l} = rgbToHsl(r, g, b);
+
+                        // --- FILTERING "BAD" COLORS ---
+                        
+                        // 1. Too Gray/Desaturated (S < 0.15)
+                        //    - Exception: allow if it's really the only thing (handled by scoring)
+                        if (s < 0.15) continue; 
+
+                        // 2. Too Dark or Too Light (L < 0.1 or L > 0.9)
+                        if (l < 0.1 || l > 0.9) continue;
+
+                        // 3. Puke Green / Muddy Yellow (Hue ~60-100, moderate/low saturation/lightness)
+                        //    Hue 60 is Yellow, 120 is Green. "Puke" is usually darkish yellow-green.
+                        if (h > 60 && h < 100 && s < 0.6 && l < 0.5) continue;
+
+                        // 4. Light Salmon / Flesh tones that might look bad (Hue ~0-25, High Lightness)
+                        if (h >= 0 && h < 25 && l > 0.75) continue;
+
+                        // --- BUCKETING ---
+                        // Round RGB to nearest 10 to group similar colors
+                        const bucketR = Math.round(r / 10) * 10;
+                        const bucketG = Math.round(g / 10) * 10;
+                        const bucketB = Math.round(b / 10) * 10;
+                        const key = `${bucketR},${bucketG},${bucketB}`;
+
+                        if (!colorCounts[key]) {
+                            colorCounts[key] = { count: 0, s: s, r: bucketR, g: bucketG, b: bucketB };
+                        }
+                        colorCounts[key].count++;
+                    }
+
+                    // --- SCORING ---
+                    // Find winner: Abundance * (Saturation^2)
+                    // We square saturation to heavily favor vibrant colors over slightly more common gray ones.
+                    for (const key in colorCounts) {
+                        const c = colorCounts[key];
+                        // Bonus for being reasonably bright but not washed out (L ~ 0.5 is ideal)
+                        // But primary driver is Count * Saturation
+                        const score = c.count * Math.pow(c.s, 2); 
+
+                        if (score > maxScore) {
+                            maxScore = score;
+                            bestColor = {r: c.r, g: c.g, b: c.b};
+                        }
+                    }
+
+                    return bestColor;
+
+                } catch (e) {
+                    // Security error usually
+                    console.warn("Canvas access denied (CORS):", e);
+                    return {r: 20, g: 20, b: 20};
                 }
+            }
 
-                length = data.data.length;
+            // Helper: RGB to HSL
+            function rgbToHsl(r, g, b) {
+                r /= 255; g /= 255; b /= 255;
+                const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
 
-                while ((i += blockSize * 4) < length) {
-                    ++count;
-                    rgb.r += data.data[i];
-                    rgb.g += data.data[i+1];
-                    rgb.b += data.data[i+2];
+                if (max === min) {
+                    h = s = 0; // achromatic
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h *= 60;
                 }
-
-                // ~~ used to floor values
-                rgb.r = ~~(rgb.r / count);
-                rgb.g = ~~(rgb.g / count);
-                rgb.b = ~~(rgb.b / count);
-
-                return rgb;
+                return { h, s, l };
             }
         })();
     </script>
