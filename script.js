@@ -158,23 +158,51 @@ function showHome() {
     `;
 }
 
-// Library Rendering (Updated for new Sidebar)
+// Library Rendering (Updated for Drawer)
 function renderLibrary() {
     if (!libraryList) return;
     libraryList.innerHTML = '';
 
-    // Playlists
-    if (library.playlists.length === 0) {
-        libraryList.innerHTML = '<div class="text-gray-600 text-xs px-4 mt-2">No playlists yet.</div>';
-    } else {
-        library.playlists.forEach(pl => {
-            const div = document.createElement('div');
-            div.className = 'playlist-item hover:bg-[#1a1a1a] rounded-lg mx-2';
-            div.textContent = pl.name;
-            div.onclick = () => openPlaylist(pl.id);
-            libraryList.appendChild(div);
-        });
+    // Liked Songs Item
+    const likedDiv = document.createElement('div');
+    likedDiv.className = 'compact-list-item flex items-center gap-2 p-2';
+    
+    let coverUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+    if (library.likedSongs.length > 0) {
+        const first = library.likedSongs[0];
+        coverUrl = getImageUrl(first);
     }
+    
+    likedDiv.innerHTML = `
+        <img src="${coverUrl}" class="w-10 h-10 rounded object-cover">
+        <div class="flex-grow overflow-hidden">
+            <div class="text-sm text-white truncate">Liked Songs</div>
+            <div class="text-xs text-gray-500">${library.likedSongs.length} songs</div>
+        </div>
+    `;
+    likedDiv.onclick = openLikedSongs;
+    libraryList.appendChild(likedDiv);
+
+    // Playlists
+    library.playlists.forEach(pl => {
+        const div = document.createElement('div');
+        div.className = 'compact-list-item flex items-center gap-2 p-2';
+        
+        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        if (pl.songs.length > 0) {
+             plCover = getImageUrl(pl.songs[0]);
+        }
+
+        div.innerHTML = `
+            <img src="${plCover}" class="w-10 h-10 rounded object-cover">
+            <div class="flex-grow overflow-hidden">
+                <div class="text-sm text-white truncate">${pl.name}</div>
+                <div class="text-xs text-gray-500">${pl.songs.length} songs</div>
+            </div>
+        `;
+        div.onclick = () => openPlaylist(pl.id);
+        libraryList.appendChild(div);
+    });
 }
 
 function openLikedSongs() {
