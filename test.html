@@ -36,7 +36,10 @@
             background-color: #040404; 
             color: #d1d5db; 
             font-weight: 300; 
-            padding-bottom: 120px; /* Space for player */
+            overflow: hidden; /* Prevent body scroll, use flex containers */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         /* --- Global Scrollbar --- */
@@ -82,45 +85,43 @@
             border-color: #4f46e5;
         }
 
-        /* --- Player Bar (Translucent & Dynamic) --- */
+        /* --- Player Bar (Fixed Dark Style) --- */
         #player-bar {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
             height: 90px;
             background-color: rgba(0,0,0,0.95);
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid #252525;
             backdrop-filter: blur(20px);
             z-index: 100;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 2rem;
-            transition: background-color 0.5s ease, border-color 0.5s ease;
+            flex-shrink: 0;
         }
 
         .player-info { display: flex; align-items: center; gap: 1rem; width: 300px; }
         .player-info img { 
             width: 56px; height: 56px; 
             border-radius: 0.5rem; 
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid #333;
             object-fit: cover;
         }
         .player-text { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
-        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-        .player-artist { color: rgba(255,255,255,0.7); font-size: 0.75rem; }
+        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-artist { color: #9ca3af; font-size: 0.75rem; }
 
         .custom-player-controls {
             flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; max-width: 600px;
         }
         .control-buttons { display: flex; gap: 2rem; align-items: center; }
-        .player-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.2rem; cursor: pointer; transition: all 0.2s; }
+        .player-btn { background: none; border: none; color: #9ca3af; font-size: 1.2rem; cursor: pointer; transition: all 0.2s; }
         .player-btn:hover { color: white; transform: scale(1.1); }
         .play-btn { color: white; font-size: 2.5rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
         .play-btn:hover { transform: scale(1.1); }
 
-        .progress-container { width: 100%; display: flex; align-items: center; gap: 1rem; color: rgba(255,255,255,0.7); font-size: 0.75rem; }
+        .progress-container { width: 100%; display: flex; align-items: center; gap: 1rem; color: #9ca3af; font-size: 0.75rem; }
         .progress-bar {
-            flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;
+            flex: 1; height: 4px; background: #333; border-radius: 2px;
             -webkit-appearance: none; outline: none; cursor: pointer;
         }
         .progress-bar::-webkit-slider-thumb {
@@ -128,9 +129,91 @@
         }
         .progress-container:hover .progress-bar::-webkit-slider-thumb { opacity: 1; }
 
-        .volume-controls { display: flex; align-items: center; gap: 1rem; width: 200px; justify-content: flex-end; color: rgba(255,255,255,0.6); }
-        .volume-slider { width: 80px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; -webkit-appearance: none; outline: none; }
-        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: rgba(255,255,255,0.8); border-radius: 50%; }
+        .volume-controls { display: flex; align-items: center; gap: 1rem; width: 200px; justify-content: flex-end; color: #9ca3af; }
+        .volume-slider { width: 80px; height: 4px; background: #333; border-radius: 2px; -webkit-appearance: none; outline: none; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: #9ca3af; border-radius: 50%; }
+
+        /* --- Sidebar & Layout --- */
+        .app-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background-color: #050505;
+            border-right: 1px solid #252525;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .main-view {
+            flex: 1;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #0a0a0a 0%, #040404 100%);
+            padding: 2rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            color: #d1d5db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .nav-item:hover { background-color: #1a1a1a; color: white; }
+        .nav-item.active { background-color: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+        
+        .playlist-item {
+            padding: 8px 16px;
+            color: #9ca3af;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.2s;
+        }
+        .playlist-item:hover { color: white; }
+
+        /* --- Modals --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px); z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .modal-content {
+            background: #111; border: 1px solid #333;
+            border-radius: 16px; padding: 24px;
+            width: 90%; max-width: 400px;
+            transform: scale(0.95); transition: transform 0.2s;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+
+        .modal-input {
+            width: 100%; background: #000; border: 1px solid #333;
+            color: white; padding: 12px; border-radius: 8px;
+            margin: 16px 0; outline: none;
+        }
+        .modal-input:focus { border-color: #4f46e5; }
+
+        .modal-btn {
+            width: 100%; padding: 12px; border-radius: 8px;
+            font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary { background: transparent; color: #9ca3af; border: 1px solid #333; margin-top: 8px; }
+        .btn-secondary:hover { border-color: #fff; color: white; }
 
         /* --- Animations --- */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -140,84 +223,83 @@
         .hidden { display: none !important; }
     </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-    <!-- Top Navigation / Toolbar -->
-    <header class="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md z-40 border-b border-brand-border h-16 flex items-center justify-between px-6">
-        <div class="flex items-center gap-4">
-            <h1 class="text-xl text-white tracking-widest font-bold mr-4">VELIUM</h1>
-            
-            <label class="cursor-pointer">
-                <input type="radio" name="search-type" value="song" class="hidden peer" checked>
-                <div class="btn-toolbar-style peer-checked:active">
-                    <i class="fas fa-music"></i> Songs
-                </div>
-            </label>
-            <label class="cursor-pointer">
-                <input type="radio" name="search-type" value="album" class="hidden peer">
-                <div class="btn-toolbar-style peer-checked:active">
-                    <i class="fas fa-compact-disc"></i> Albums
-                </div>
-            </label>
-            <label class="cursor-pointer">
-                <input type="radio" name="search-type" value="artist" class="hidden peer">
-                <div class="btn-toolbar-style peer-checked:active">
-                    <i class="fas fa-microphone-lines"></i> Artists
-                </div>
-            </label>
-        </div>
-
-        <div class="flex items-center gap-3">
-             <button id="create-playlist-btn" class="btn-toolbar-style" title="New Playlist">
-                <i class="fas fa-plus"></i> New Playlist
-            </button>
-             <button id="view-library-btn" class="btn-toolbar-style" title="My Library" onclick="document.getElementById('library-drawer').classList.toggle('translate-x-full')">
-                <i class="fas fa-layer-group"></i> Library
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="pt-24 px-4 sm:px-8 max-w-screen-2xl mx-auto">
+    <div class="app-layout">
         
-        <!-- Search Hero -->
-        <div class="max-w-3xl mx-auto mb-12">
-            <div id="search-container" class="relative flex items-center bg-[#111] border border-[#333] rounded-2xl p-2 group transition-all">
-                <i class="fas fa-search text-gray-500 ml-4 text-lg"></i>
-                <input type="text" id="search-box" placeholder="Search for songs, artists, or albums..." 
-                       class="w-full bg-transparent border-none outline-none text-white px-4 py-3 text-lg placeholder-gray-600 font-light">
-                <button id="search-btn" class="bg-[#222] hover:bg-[#333] text-white px-6 py-2 rounded-xl transition-colors font-medium">Search</button>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="p-6">
+                <h1 class="text-2xl font-bold text-white tracking-widest flex items-center gap-3">
+                    <i class="fas fa-wave-square text-indigo-500"></i> VELIUM
+                </h1>
             </div>
-        </div>
 
-        <!-- Dynamic Header -->
-        <div class="flex justify-between items-center mb-6">
-            <h2 id="main-header" class="text-2xl text-white font-medium">Trending</h2>
-        </div>
+            <nav class="px-4 space-y-1">
+                <div class="nav-item active" onclick="showHome()">
+                    <i class="fas fa-home text-lg"></i> Home
+                </div>
+                <div class="nav-item" onclick="handleSearch()">
+                    <i class="fas fa-search text-lg"></i> Search
+                </div>
+                <div class="nav-item" onclick="openLikedSongs()">
+                    <i class="fas fa-heart text-lg"></i> Liked Songs
+                </div>
+            </nav>
 
-        <!-- Content Grid (Cards) -->
-        <div id="content-area" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-            <!-- Initial State -->
-            <div class="col-span-full flex flex-col items-center justify-center text-gray-500 mt-20 opacity-50">
-                <i class="fas fa-wave-square text-6xl mb-4"></i>
-                <p class="text-xl">Discover your sound.</p>
+            <div class="mt-8 px-6 flex items-center justify-between">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Playlists</h3>
+                <button onclick="openCreatePlaylistModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-        </div>
 
-    </main>
+            <div id="library-list" class="flex-1 overflow-y-auto mt-2 px-2 pb-4">
+                <!-- Playlists go here -->
+            </div>
+        </aside>
 
-    <!-- Library Drawer (Right Side) -->
-    <aside id="library-drawer" class="fixed top-0 right-0 h-full w-80 bg-[#0a0a0a] border-l border-[#252525] z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col pt-20">
-        <div class="px-6 pb-4 border-b border-[#252525] flex justify-between items-center">
-            <h2 class="text-xl text-white font-medium">Your Library</h2>
-            <button onclick="document.getElementById('library-drawer').classList.add('translate-x-full')" class="text-gray-400 hover:text-white">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-        </div>
-        <div id="library-list" class="flex-grow overflow-y-auto p-4 space-y-2">
-            <!-- Populated by script.js -->
-        </div>
-    </aside>
+        <!-- Main View -->
+        <main class="main-view" id="main-content">
+            
+            <!-- Search Header -->
+            <div class="flex items-center gap-4 mb-8 sticky top-0 bg-[#0a0a0a]/90 backdrop-blur-md p-4 -mx-8 -mt-8 z-10 border-b border-[#252525]">
+                <div id="search-container" class="relative flex-1 flex items-center bg-[#111] border border-[#333] rounded-xl p-1 group transition-all">
+                    <i class="fas fa-search text-gray-500 ml-3"></i>
+                    <input type="text" id="search-box" placeholder="Search for songs, artists, or albums..." 
+                           class="w-full bg-transparent border-none outline-none text-white px-3 py-2 placeholder-gray-600">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="search-type" value="song" class="hidden peer" checked>
+                        <div class="px-4 py-2 rounded-lg bg-[#111] border border-[#333] text-gray-400 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-500 peer-checked:border-indigo-500 text-sm font-medium transition-all">Songs</div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="search-type" value="album" class="hidden peer">
+                        <div class="px-4 py-2 rounded-lg bg-[#111] border border-[#333] text-gray-400 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-500 peer-checked:border-indigo-500 text-sm font-medium transition-all">Albums</div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="search-type" value="artist" class="hidden peer">
+                        <div class="px-4 py-2 rounded-lg bg-[#111] border border-[#333] text-gray-400 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-500 peer-checked:border-indigo-500 text-sm font-medium transition-all">Artists</div>
+                    </label>
+                </div>
+            </div>
+
+            <h2 id="main-header" class="text-3xl font-bold text-white mb-6">Home</h2>
+
+            <!-- Content Area -->
+            <div id="content-area" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                <!-- Initial State -->
+                <div class="col-span-full flex flex-col items-center justify-center text-gray-500 mt-20 opacity-50">
+                    <i class="fas fa-compact-disc text-6xl mb-4"></i>
+                    <p class="text-xl">Search to start listening.</p>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
 
     <!-- Player Bar -->
     <div id="player-bar" class="hidden">
@@ -253,6 +335,28 @@
         <audio id="audio-player" class="hidden" crossorigin="anonymous"></audio>
     </div>
 
+    <!-- Create Playlist Modal -->
+    <div id="create-playlist-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-white mb-2">Create Playlist</h3>
+            <p class="text-gray-400 text-sm">Give your new playlist a name.</p>
+            <input type="text" id="new-playlist-name" class="modal-input" placeholder="My Awesome Playlist">
+            <button onclick="confirmCreatePlaylist()" class="modal-btn btn-primary">Create</button>
+            <button onclick="closeModals()" class="modal-btn btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Add to Playlist Modal -->
+    <div id="add-to-playlist-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-white mb-4">Add to Playlist</h3>
+            <div id="modal-playlist-list" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Populated dynamically -->
+            </div>
+            <button onclick="closeModals()" class="modal-btn btn-secondary mt-4">Cancel</button>
+        </div>
+    </div>
+
     <!-- Lyrics Overlay -->
     <div id="lyrics-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col items-center justify-center p-8">
         <button class="close-lyrics absolute top-8 right-8 text-white text-3xl hover:text-gray-300" id="close-lyrics"><i class="fas fa-times"></i></button>
@@ -263,101 +367,7 @@
         </div>
     </div>
 
-    <!-- DB and Script -->
     <script src="db.js"></script>
     <script src="script.js"></script>
-
-    <!-- Dynamic Color Script (Inline from previous step) -->
-    <script>
-        (function() {
-            const playerImg = document.getElementById('player-img');
-            const playerBar = document.getElementById('player-bar');
-            
-            playerImg.crossOrigin = "Anonymous";
-
-            playerImg.addEventListener('load', function() {
-                if (!playerImg.src || playerImg.src.includes('data:image')) {
-                     playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
-                     playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
-                     return;
-                }
-
-                try {
-                    const color = getDominantColor(playerImg);
-                    playerBar.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.95)`;
-                    playerBar.style.borderTopColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
-                } catch (e) {
-                    playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
-                    playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
-                }
-            });
-
-            function getDominantColor(imgEl) {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 100;
-                canvas.height = 100;
-                
-                try {
-                    ctx.drawImage(imgEl, 0, 0, 100, 100);
-                    const imageData = ctx.getImageData(0, 0, 100, 100).data;
-                    const colorCounts = {};
-                    let maxScore = -1;
-                    let bestColor = {r: 20, g: 20, b: 20}; 
-
-                    for (let i = 0; i < imageData.length; i += 4) {
-                        const r = imageData[i], g = imageData[i + 1], b = imageData[i + 2], a = imageData[i + 3];
-                        if (a < 128) continue; 
-                        const {h, s, l} = rgbToHsl(r, g, b);
-
-                        if (s < 0.15) continue; 
-                        if (l < 0.1 || l > 0.9) continue;
-                        if (h > 60 && h < 100 && s < 0.6 && l < 0.5) continue; // Puke green
-                        if (h >= 0 && h < 25 && l > 0.75) continue; // Pale skin/salmon
-
-                        const bucketR = Math.round(r / 10) * 10;
-                        const bucketG = Math.round(g / 10) * 10;
-                        const bucketB = Math.round(b / 10) * 10;
-                        const key = `${bucketR},${bucketG},${bucketB}`;
-
-                        if (!colorCounts[key]) {
-                            colorCounts[key] = { count: 0, s: s, r: bucketR, g: bucketG, b: bucketB };
-                        }
-                        colorCounts[key].count++;
-                    }
-
-                    for (const key in colorCounts) {
-                        const c = colorCounts[key];
-                        const score = c.count * Math.pow(c.s, 2); 
-                        if (score > maxScore) {
-                            maxScore = score;
-                            bestColor = {r: c.r, g: c.g, b: c.b};
-                        }
-                    }
-                    return bestColor;
-                } catch (e) {
-                    return {r: 20, g: 20, b: 20};
-                }
-            }
-
-            function rgbToHsl(r, g, b) {
-                r /= 255; g /= 255; b /= 255;
-                const max = Math.max(r, g, b), min = Math.min(r, g, b);
-                let h, s, l = (max + min) / 2;
-                if (max === min) h = s = 0;
-                else {
-                    const d = max - min;
-                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                    switch (max) {
-                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                        case g: h = (b - r) / d + 2; break;
-                        case b: h = (r - g) / d + 4; break;
-                    }
-                    h *= 60;
-                }
-                return { h, s, l };
-            }
-        })();
-    </script>
 </body>
 </html>

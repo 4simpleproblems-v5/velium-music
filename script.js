@@ -74,9 +74,20 @@ if(closeLyricsBtn) closeLyricsBtn.addEventListener('click', () => {
     lyricsOverlay.classList.remove('active');
 });
 
-// Create Playlist
-if(createPlaylistBtn) createPlaylistBtn.addEventListener('click', async () => {
-    const name = prompt("Enter playlist name:");
+// Modal Logic
+let itemToAdd = null;
+
+function openCreatePlaylistModal() {
+    const modal = document.getElementById('create-playlist-modal');
+    const input = document.getElementById('new-playlist-name');
+    input.value = '';
+    modal.classList.add('active');
+    input.focus();
+}
+
+async function confirmCreatePlaylist() {
+    const input = document.getElementById('new-playlist-name');
+    const name = input.value.trim();
     if (name) {
         const newPlaylist = {
             id: 'pl-' + Date.now(),
@@ -87,187 +98,83 @@ if(createPlaylistBtn) createPlaylistBtn.addEventListener('click', async () => {
         library.playlists.push(newPlaylist);
         await saveLibrary();
         renderLibrary();
-    }
-});
-
-// Custom Player Events
-if(playPauseBtn) playPauseBtn.addEventListener('click', togglePlay);
-if(playerLikeBtn) playerLikeBtn.addEventListener('click', () => {
-    if (currentTrack) toggleLike(currentTrack);
-});
-
-audioPlayer.addEventListener('timeupdate', updateProgress);
-audioPlayer.addEventListener('loadedmetadata', () => {
-    totalDurationElem.textContent = formatTime(audioPlayer.duration);
-    seekSlider.max = Math.floor(audioPlayer.duration);
-});
-audioPlayer.addEventListener('ended', () => {
-    isPlaying = false;
-    updatePlayBtn();
-    seekSlider.value = 0;
-});
-audioPlayer.addEventListener('play', () => {
-    isPlaying = true;
-    updatePlayBtn();
-});
-audioPlayer.addEventListener('pause', () => {
-    isPlaying = false;
-    updatePlayBtn();
-});
-
-if(seekSlider) seekSlider.addEventListener('input', () => {
-    audioPlayer.currentTime = seekSlider.value;
-});
-
-if(volumeSlider) volumeSlider.addEventListener('input', (e) => {
-    audioPlayer.volume = e.target.value;
-});
-
-
-// Library Logic (IndexedDB)
-async function loadLibrary() {
-    if (window.VeliumDB) {
-        try {
-            library = await window.VeliumDB.getLibrary();
-            if (!library.likedSongs) library.likedSongs = [];
-            if (!library.playlists) library.playlists = [];
-        } catch (e) {
-            console.error("DB Load failed", e);
-        }
-    } else {
-        // Fallback or Initial state
-        const stored = localStorage.getItem('velium_library');
-        if (stored) library = JSON.parse(stored);
+        closeModals();
+        showToast(`Created "${name}"`);
     }
 }
 
-async function saveLibrary() {
-    if (window.VeliumDB) {
-        await window.VeliumDB.saveLibrary(library);
-    } else {
-        localStorage.setItem('velium_library', JSON.stringify(library));
-    }
+function closeModals() {
+    document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active'));
+    itemToAdd = null;
 }
 
-async function toggleLike(item) {
-    const trackUrl = item.song?.url || item.url;
-    const trackId = item.id; 
-
-    const index = library.likedSongs.findIndex(s => {
-        const sUrl = s.song?.url || s.url;
-        const sId = s.id;
-        if (trackId && sId === trackId) return true;
-        if (trackUrl && sUrl === trackUrl) return true;
-        return false;
-    });
-
-    if (index > -1) {
-        library.likedSongs.splice(index, 1);
-        showToast("Removed from Liked Songs");
-    } else {
-        // Fix for persistence: Ensure we save enough data to play it back later
-        let cleanItem = { ...item }; // Copy everything first
-        
-        // Ensure critical fields exist
-        if (!cleanItem.downloadUrl && !cleanItem.url && cleanItem.song?.url) {
-            cleanItem.url = cleanItem.song.url;
-        }
-
-        library.likedSongs.unshift(cleanItem);
-        showToast("Added to Liked Songs");
-    }
-    await saveLibrary();
-    renderLibrary();
-    updatePlayerLikeIcon();
-    
-    if (mainHeader.textContent === "Liked Songs") {
-        openLikedSongs();
-    }
-}
-
-async function addToPlaylist(item) {
+// Add to Playlist Logic
+function addToPlaylist(item) {
     if (library.playlists.length === 0) {
-        alert("Create a playlist first!");
-        return;
+        openCreatePlaylistModal();
+        return; // User can try adding again after creating one
     }
-    // Simple prompt for now, but UI will handle this better in test.html
-    const names = library.playlists.map((pl, i) => `${i + 1}. ${pl.name}`).join('\n');
-    const choice = prompt(`Add to which playlist?\n${names}`);
-    const idx = parseInt(choice) - 1;
     
-    if (idx >= 0 && idx < library.playlists.length) {
-        const pl = library.playlists[idx];
-        // Check duplicates
-        const exists = pl.songs.some(s => s.id === item.id || (s.url && s.url === item.url));
-        if (exists) {
-            showToast("Song already in playlist");
-        } else {
-            pl.songs.push(item);
-            pl.updatedAt = new Date().toISOString();
-            await saveLibrary();
-            showToast(`Added to ${pl.name}`);
-            renderLibrary(); // Update counts
-        }
-    }
-}
+    itemToAdd = item;
+    const modal = document.getElementById('add-to-playlist-modal');
+    const list = document.getElementById('modal-playlist-list');
+    list.innerHTML = '';
 
-function updatePlayerLikeIcon() {
-    if (!currentTrack) return;
-    const trackUrl = currentTrack.song?.url || currentTrack.url;
-    const isLiked = library.likedSongs.some(s => {
-        const sUrl = s.song?.url || s.url;
-        const sId = s.id;
-        if (currentTrack.id && sId === currentTrack.id) return true;
-        if (trackUrl && sUrl === trackUrl) return true;
-        return false;
+    library.playlists.forEach(pl => {
+        const btn = document.createElement('div');
+        btn.className = 'p-3 bg-[#222] hover:bg-[#333] rounded-lg cursor-pointer flex justify-between items-center transition-colors';
+        btn.innerHTML = `<span class="text-white font-medium">${pl.name}</span><span class="text-xs text-gray-500">${pl.songs.length} songs</span>`;
+        btn.onclick = () => confirmAddToPlaylist(pl);
+        list.appendChild(btn);
     });
-    playerLikeBtn.innerHTML = isLiked ? '<i class="fas fa-heart text-red-500"></i>' : '<i class="far fa-heart"></i>';
+
+    modal.classList.add('active');
 }
 
+async function confirmAddToPlaylist(playlist) {
+    if (!itemToAdd) return;
+    
+    // Check duplicates
+    const exists = playlist.songs.some(s => s.id === itemToAdd.id || (s.url && s.url === itemToAdd.url));
+    if (exists) {
+        showToast("Song already in playlist");
+    } else {
+        playlist.songs.push(itemToAdd);
+        playlist.updatedAt = new Date().toISOString();
+        await saveLibrary();
+        showToast(`Added to ${playlist.name}`);
+        renderLibrary();
+    }
+    closeModals();
+}
+
+function showHome() {
+    mainHeader.textContent = "Home";
+    contentArea.innerHTML = `
+        <div class="col-span-full flex flex-col items-center justify-center text-gray-500 mt-20 opacity-50">
+            <i class="fas fa-compact-disc text-6xl mb-4"></i>
+            <p class="text-xl">Search to start listening.</p>
+        </div>
+    `;
+}
+
+// Library Rendering (Updated for new Sidebar)
 function renderLibrary() {
     if (!libraryList) return;
     libraryList.innerHTML = '';
 
-    // Liked Songs Item
-    const likedDiv = document.createElement('div');
-    likedDiv.className = 'compact-list-item flex items-center gap-2 p-2';
-    
-    let coverUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-    if (library.likedSongs.length > 0) {
-        const first = library.likedSongs[0];
-        coverUrl = getImageUrl(first);
+    // Playlists
+    if (library.playlists.length === 0) {
+        libraryList.innerHTML = '<div class="text-gray-600 text-xs px-4 mt-2">No playlists yet.</div>';
+    } else {
+        library.playlists.forEach(pl => {
+            const div = document.createElement('div');
+            div.className = 'playlist-item hover:bg-[#1a1a1a] rounded-lg mx-2';
+            div.textContent = pl.name;
+            div.onclick = () => openPlaylist(pl.id);
+            libraryList.appendChild(div);
+        });
     }
-    
-    likedDiv.innerHTML = `
-        <img src="${coverUrl}" class="w-10 h-10 rounded object-cover">
-        <div class="flex-grow overflow-hidden">
-            <div class="text-sm text-white truncate">Liked Songs</div>
-            <div class="text-xs text-gray-500">${library.likedSongs.length} songs</div>
-        </div>
-    `;
-    likedDiv.onclick = openLikedSongs;
-    libraryList.appendChild(likedDiv);
-
-    // Custom Playlists
-    library.playlists.forEach(pl => {
-        const div = document.createElement('div');
-        div.className = 'compact-list-item flex items-center gap-2 p-2';
-        
-        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-        if (pl.songs.length > 0) {
-             plCover = getImageUrl(pl.songs[0]);
-        }
-
-        div.innerHTML = `
-            <img src="${plCover}" class="w-10 h-10 rounded object-cover">
-            <div class="flex-grow overflow-hidden">
-                <div class="text-sm text-white truncate">${pl.name}</div>
-                <div class="text-xs text-gray-500">${pl.songs.length} songs</div>
-            </div>
-        `;
-        div.onclick = () => openPlaylist(pl.id);
-        libraryList.appendChild(div);
-    });
 }
 
 function openLikedSongs() {
