@@ -524,7 +524,7 @@ window.openPlaylist = function(playlistId) {
             <div class="artist-info">
                 <h2>${pl.name}</h2>
                 <p>${pl.songs.length} songs • Updated: ${lastUpdated}</p>
-                <button onclick="openEditPlaylistModal()" class="mt-2 text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                <button onclick="openEditPlaylistModal()" class="btn-toolbar-style mt-4">
                     <i class="fas fa-pen"></i> Edit Playlist
                 </button>
             </div>

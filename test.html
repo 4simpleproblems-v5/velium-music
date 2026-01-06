@@ -45,26 +45,34 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
 
-        /* --- Toolbar Button Style --- */
+        /* --- Toolbar Button Style (Match 4SP DV) --- */
         .btn-toolbar-style {
-            background: #000;
+            background: #0a0a0a;
             border: 1px solid #333;
             border-radius: 14px;
             color: #d1d5db;
-            padding: 0.5rem 1.25rem;
+            padding: 0.75rem 1.25rem;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
             font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            position: relative;
         }
         .btn-toolbar-style:hover {
             border-color: #fff;
             color: #fff;
-            transform: translateY(-1px);
+            transform: scale(1.02) translateY(-1px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.1);
+            z-index: 50;
+        }
+        .btn-toolbar-style:active {
+            transform: scale(0.98);
+            transition: transform 0.05s ease-out !important;
         }
         .btn-toolbar-style.active {
             background-color: rgba(79, 70, 229, 0.1);
@@ -132,9 +140,9 @@
         .volume-slider { width: 80px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; -webkit-appearance: none; outline: none; }
         .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: rgba(255,255,255,0.8); border-radius: 50%; }
 
-        /* --- Modals --- */
+        /* --- Modals (Match 4SP DV Settings) --- */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
             backdrop-filter: blur(5px); z-index: 200;
             display: flex; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none; transition: opacity 0.2s;
@@ -142,31 +150,53 @@
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
         .modal-content {
-            background: #111; border: 1px solid #333;
-            border-radius: 16px; padding: 24px;
-            width: 90%; max-width: 400px;
+            background: #000; border: 1px solid #333;
+            border-radius: 1rem; 
+            width: 90%; max-width: 450px;
             transform: scale(0.95); transition: transform 0.2s;
-            display: flex; flex-direction: column; gap: 1rem;
+            overflow: hidden;
+            display: flex; flex-direction: column;
         }
         .modal-overlay.active .modal-content { transform: scale(1); }
 
-        .modal-input {
-            width: 100%; background: #000; border: 1px solid #333;
-            color: white; padding: 12px; border-radius: 8px;
-            outline: none;
+        .modal-header {
+            padding: 1.5rem; border-bottom: 1px solid #333;
+            background: #000; display: flex; justify-content: space-between; align-items: center;
         }
-        .modal-input:focus { border-color: #4f46e5; }
+        .modal-body { padding: 1.5rem; background: #0a0a0a; display: flex; flex-direction: column; gap: 1rem; }
+
+        .modal-input {
+            width: 100%; background: #111; border: 1px solid #252525;
+            color: white; padding: 0.75rem; border-radius: 0.5rem;
+            outline: none; transition: all 0.2s;
+        }
+        .modal-input:focus { border-color: #4f46e5; transform: scale(1.01); }
 
         .modal-btn {
-            width: 100%; padding: 12px; border-radius: 8px;
-            font-weight: 600; cursor: pointer; transition: opacity 0.2s; text-align: center;
+            width: 100%; padding: 0.75rem 1.25rem; border-radius: 14px;
+            font-weight: 500; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center; font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
         }
-        .btn-primary { background: #4f46e5; color: white; border: none; }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-secondary { background: transparent; color: #9ca3af; border: 1px solid #333; }
+        .modal-btn:hover { transform: scale(1.02) translateY(-1px); }
+        .modal-btn:active { transform: scale(0.98); transition: transform 0.05s ease-out !important; }
+
+        .btn-primary { background: rgba(79, 70, 229, 0.1); color: #4f46e5; border: 1px solid #4f46e5; }
+        .btn-primary:hover { background: rgba(79, 70, 229, 0.15); border-color: #6366f1; color: #6366f1; }
+        
+        .btn-secondary { background: #0a0a0a; color: #d1d5db; border: 1px solid #333; }
         .btn-secondary:hover { border-color: #fff; color: white; }
-        .btn-danger { background: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid #ef4444; }
-        .btn-danger:hover { background: rgba(220, 38, 38, 0.2); }
+        
+        .btn-danger { background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid #dc2626; }
+        .btn-danger:hover { background: rgba(220, 38, 38, 0.15); border-color: #ef4444; color: #ef4444; }
+
+        .close-btn-round {
+            width: 2.5rem; height: 2.5rem; border-radius: 14px;
+            background: #0a0a0a; border: 1px solid #333; color: #d1d5db;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .close-btn-round:hover { border-color: #fff; color: #fff; transform: scale(1.05); }
 
         /* Cropper */
         #cropper-modal-content { max-width: 600px; }
@@ -239,7 +269,7 @@
                 <i class="fas fa-search text-gray-500 ml-4 text-lg"></i>
                 <input type="text" id="search-box" placeholder="Search for songs, artists, or albums..." 
                        class="w-full bg-transparent border-none outline-none text-white px-4 py-3 text-lg placeholder-gray-600 font-light">
-                <button id="search-btn" class="bg-[#222] hover:bg-[#333] text-white px-6 py-2 rounded-xl transition-colors font-medium">Search</button>
+                <button onclick="handleSearch()" class="btn-toolbar-style active px-8">Search</button>
             </div>
         </div>
 
@@ -309,53 +339,60 @@
     <!-- Create Playlist Modal -->
     <div id="create-playlist-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="text-xl font-bold text-white">Create Playlist</h3>
-            <p class="text-gray-400 text-sm">Give your new playlist a name.</p>
-            <input type="text" id="new-playlist-name" class="modal-input" placeholder="My Awesome Playlist">
-            <button onclick="confirmCreatePlaylist()" class="modal-btn btn-primary">Create</button>
-            <button onclick="closeModals()" class="modal-btn btn-secondary">Cancel</button>
+            <div class="modal-header">
+                <h3 class="text-xl font-bold text-white">Create Playlist</h3>
+                <button onclick="closeModals()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-gray-400 text-sm">Give your new playlist a name.</p>
+                <input type="text" id="new-playlist-name" class="modal-input" placeholder="My Awesome Playlist">
+                <button onclick="confirmCreatePlaylist()" class="modal-btn btn-primary mt-2">Create</button>
+            </div>
         </div>
     </div>
 
     <!-- Edit Playlist Modal -->
     <div id="edit-playlist-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="text-xl font-bold text-white">Edit Playlist</h3>
-            
-            <label class="text-gray-400 text-sm">Name</label>
-            <input type="text" id="edit-playlist-name" class="modal-input" placeholder="Playlist Name">
-            
-            <div class="flex flex-col gap-2">
-                <button onclick="triggerCoverUpload()" class="modal-btn btn-secondary">
-                    <i class="fas fa-image mr-2"></i> Upload Cover
+            <div class="modal-header">
+                <h3 class="text-xl font-bold text-white">Edit Playlist</h3>
+                <button onclick="closeModals()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <label class="text-gray-400 text-xs font-bold uppercase tracking-wider">Playlist Name</label>
+                <input type="text" id="edit-playlist-name" class="modal-input" placeholder="Playlist Name">
+                
+                <label class="text-gray-400 text-xs font-bold uppercase tracking-wider mt-2">Cover Image</label>
+                <button onclick="triggerCoverUpload()" class="btn-toolbar-style w-full justify-center">
+                    <i class="fas fa-cloud-arrow-up"></i> Upload New Cover
                 </button>
                 <input type="file" id="playlist-cover-input" accept="image/*" class="hidden">
-            </div>
 
-            <div class="flex gap-2 mt-4">
-                <button onclick="savePlaylistChanges()" class="modal-btn btn-primary flex-1">Save</button>
-                <button onclick="deletePlaylist()" class="modal-btn btn-danger flex-1">Delete</button>
+                <div class="flex gap-2 mt-6">
+                    <button onclick="savePlaylistChanges()" class="modal-btn btn-primary flex-1">Save Changes</button>
+                    <button onclick="deletePlaylist()" class="modal-btn btn-danger flex-1">Delete</button>
+                </div>
             </div>
-            <button onclick="closeModals()" class="modal-btn btn-secondary mt-2">Cancel</button>
         </div>
     </div>
 
     <!-- Cropper Modal -->
     <div id="cropper-modal" class="modal-overlay" style="z-index: 210;">
         <div class="modal-content" id="cropper-modal-content">
-            <div class="flex justify-between items-center mb-4">
+            <div class="modal-header">
                 <h3 class="text-xl font-bold text-white">Crop Cover</h3>
-                <button onclick="closeCropper()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+                <button onclick="closeCropper()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
             </div>
             
-            <div id="cropperCanvasContainer" class="bg-black flex justify-center items-center">
-                <canvas id="cropperCanvas"></canvas>
-            </div>
-            
-            <p class="text-xs text-gray-500 text-center mt-2">Drag to move. Scroll to resize.</p>
-
-            <div class="flex justify-end gap-2 mt-4">
-                <button onclick="submitCrop()" class="modal-btn btn-primary w-auto px-6">Apply</button>
+            <div class="p-6 bg-[#0a0a0a]">
+                <p class="text-xs text-gray-500 text-center mb-4">Drag to move. Scroll to resize.</p>
+                <div id="cropperCanvasContainer" class="bg-black flex justify-center items-center shadow-inner">
+                    <canvas id="cropperCanvas"></canvas>
+                </div>
+                
+                <div class="flex justify-end gap-2 mt-6">
+                    <button onclick="submitCrop()" class="modal-btn btn-primary w-auto px-8">Apply Crop</button>
+                </div>
             </div>
         </div>
     </div>
@@ -363,11 +400,15 @@
     <!-- Add to Playlist Modal -->
     <div id="add-to-playlist-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="text-xl font-bold text-white mb-4">Add to Playlist</h3>
-            <div id="modal-playlist-list" class="space-y-2 max-h-60 overflow-y-auto">
-                <!-- Populated dynamically -->
+            <div class="modal-header">
+                <h3 class="text-xl font-bold text-white">Add to Playlist</h3>
+                <button onclick="closeModals()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
             </div>
-            <button onclick="closeModals()" class="modal-btn btn-secondary mt-4">Cancel</button>
+            <div class="modal-body">
+                <div id="modal-playlist-list" class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -384,5 +425,98 @@
     <!-- DB and Script -->
     <script src="db.js"></script>
     <script src="script.js"></script>
+
+    <!-- Dynamic Color Script -->
+    <script>
+        (function() {
+            const playerImg = document.getElementById('player-img');
+            const playerBar = document.getElementById('player-bar');
+            
+            playerImg.crossOrigin = "Anonymous";
+
+            playerImg.addEventListener('load', function() {
+                if (!playerImg.src || playerImg.src.includes('data:image')) {
+                     playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
+                     playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
+                     return;
+                }
+
+                try {
+                    const color = getDominantColor(playerImg);
+                    playerBar.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.95)`;
+                    playerBar.style.borderTopColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
+                } catch (e) {
+                    playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
+                    playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
+                }
+            });
+
+            function getDominantColor(imgEl) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 100;
+                canvas.height = 100;
+                
+                try {
+                    ctx.drawImage(imgEl, 0, 0, 100, 100);
+                    const imageData = ctx.getImageData(0, 0, 100, 100).data;
+                    const colorCounts = {};
+                    let maxScore = -1;
+                    let bestColor = {r: 20, g: 20, b: 20}; 
+
+                    for (let i = 0; i < imageData.length; i += 4) {
+                        const r = imageData[i], g = imageData[i + 1], b = imageData[i + 2], a = imageData[i + 3];
+                        if (a < 128) continue; 
+                        const {h, s, l} = rgbToHsl(r, g, b);
+
+                        if (s < 0.15) continue; 
+                        if (l < 0.1 || l > 0.9) continue;
+                        if (h > 60 && h < 100 && s < 0.6 && l < 0.5) continue; 
+                        if (h >= 0 && h < 25 && l > 0.75) continue; 
+
+                        const bucketR = Math.round(r / 10) * 10;
+                        const bucketG = Math.round(g / 10) * 10;
+                        const bucketB = Math.round(b / 10) * 10;
+                        const key = `${bucketR},${bucketG},${bucketB}`;
+
+                        if (!colorCounts[key]) {
+                            colorCounts[key] = { count: 0, s: s, r: bucketR, g: bucketG, b: bucketB };
+                        }
+                        colorCounts[key].count++;
+                    }
+
+                    for (const key in colorCounts) {
+                        const c = colorCounts[key];
+                        const score = c.count * Math.pow(c.s, 2); 
+                        if (score > maxScore) {
+                            maxScore = score;
+                            bestColor = {r: c.r, g: c.g, b: c.b};
+                        }
+                    }
+                    return bestColor;
+                } catch (e) {
+                    return {r: 20, g: 20, b: 20};
+                }
+            }
+
+            function rgbToHsl(r, g, b) {
+                r /= 255; g /= 255; b /= 255;
+                const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+                if (max === min) h = s = 0;
+                else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h *= 60;
+                }
+                return { h, s, l };
+            }
+        })();
+    </script>
 </body>
 </html>
