@@ -1,4 +1,4 @@
-const API_BASE = "https://jiosaavn-api-privatecvc2.vercel.app";
+const API_BASE = "https://argon.global.ssl.fastly.net";
 const LYRICS_API_BASE = "https://lyrics.lewdhutao.my.eu.org/v2/musixmatch/lyrics";
 
 // State
@@ -132,23 +132,26 @@ function saveLibrary() {
     localStorage.setItem('velium_library', JSON.stringify(library));
 }
 
-function toggleLike(song) {
-    const index = library.likedSongs.findIndex(s => s.id === song.id);
+function toggleLike(item) {
+    const trackUrl = item.song?.url || item.url;
+    const index = library.likedSongs.findIndex(s => (s.song?.url || s.url) === trackUrl);
     if (index > -1) {
         library.likedSongs.splice(index, 1);
         showToast("Removed from Liked Songs");
     } else {
         // Ensure we save a clean object
-        const cleanSong = {
-            id: song.id,
-            name: song.name || song.title,
-            primaryArtists: song.primaryArtists || song.artist || '',
-            image: song.image,
-            downloadUrl: song.downloadUrl,
-            year: song.year,
-            duration: song.duration
+        const cleanItem = {
+            song: {
+                name: item.song?.name || item.name || 'Unknown',
+                url: trackUrl,
+                img: item.song?.img || { small: item.image, big: item.image },
+                duration: item.song?.duration || item.duration
+            },
+            author: {
+                name: item.author?.name || item.primaryArtists || ''
+            }
         };
-        library.likedSongs.unshift(cleanSong);
+        library.likedSongs.unshift(cleanItem);
         showToast("Added to Liked Songs");
     }
     saveLibrary();
@@ -163,7 +166,8 @@ function toggleLike(song) {
 
 function updatePlayerLikeIcon() {
     if (!currentTrack) return;
-    const isLiked = library.likedSongs.some(s => s.id === currentTrack.id);
+    const trackUrl = currentTrack.song?.url || currentTrack.url;
+    const isLiked = library.likedSongs.some(s => (s.song?.url || s.url) === trackUrl);
     playerLikeBtn.innerHTML = isLiked ? '<i class="fas fa-heart text-red-500"></i>' : '<i class="far fa-heart"></i>';
 }
 
@@ -216,9 +220,6 @@ function openLikedSongs() {
     mainHeader.textContent = "Liked Songs";
     contentArea.className = ''; // Remove grid class
     
-    // Header for playlist view
-    const lastUpdated = library.likedSongs.length > 0 ? "Just now" : "Never"; // Simplified for now
-    
     let html = `
         <div class="artist-header">
             <div class="w-32 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-4xl shadow-lg">
@@ -230,7 +231,7 @@ function openLikedSongs() {
             </div>
         </div>
         <div class="song-list">
-            ${library.likedSongs.map(song => createSongRow(song)).join('')}
+            ${library.likedSongs.map(item => createSongRow(item)).join('')}
         </div>
     `;
     
@@ -241,11 +242,13 @@ function openLikedSongs() {
     contentArea.innerHTML = html;
     
     // Attach events
-    library.likedSongs.forEach(song => {
-        const btn = document.getElementById(`play-${song.id}`);
-        const likeBtn = document.getElementById(`like-${song.id}`);
-        if (btn) btn.addEventListener('click', () => playSong(song));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(song));
+    library.likedSongs.forEach(item => {
+        const trackUrl = item.song?.url || item.url;
+        const domId = btoa(trackUrl).substring(0, 16).replace(/[/+=]/g, '');
+        const btn = document.getElementById(`play-${domId}`);
+        const likeBtn = document.getElementById(`like-${domId}`);
+        if (btn) btn.addEventListener('click', () => playSong(item));
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
     });
 }
 
@@ -269,7 +272,7 @@ function openPlaylist(playlistId) {
             </div>
         </div>
         <div class="song-list">
-            ${pl.songs.map(song => createSongRow(song)).join('')}
+            ${pl.songs.map(item => createSongRow(item)).join('')}
         </div>
     `;
 
@@ -279,15 +282,16 @@ function openPlaylist(playlistId) {
 
     contentArea.innerHTML = html;
     
-    // Attach events (similar to liked songs)
-     pl.songs.forEach(song => {
-        const btn = document.getElementById(`play-${song.id}`);
-        const likeBtn = document.getElementById(`like-${song.id}`);
-        if (btn) btn.addEventListener('click', () => playSong(song));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(song));
+    // Attach events
+     pl.songs.forEach(item => {
+        const trackUrl = item.song?.url || item.url;
+        const domId = btoa(trackUrl).substring(0, 16).replace(/[/+=]/g, '');
+        const btn = document.getElementById(`play-${domId}`);
+        const likeBtn = document.getElementById(`like-${domId}`);
+        if (btn) btn.addEventListener('click', () => playSong(item));
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
     });
 }
-
 
 // Search Logic
 async function handleSearch() {
@@ -300,13 +304,12 @@ async function handleSearch() {
     mainHeader.textContent = `Results for "${query}"`;
 
     try {
-        let url = `${API_BASE}/search/${searchType}s?query=${encodeURIComponent(query)}`;
+        let url = `${API_BASE}/api/search?query=${encodeURIComponent(query)}&limit=20`;
         const res = await fetch(url);
         const data = await res.json();
         
-        if (data.status === 'SUCCESS' || data.success || data.data) {
-             let results = data.data.results || data.data;
-             renderResults(results);
+        if (data.collection && data.collection.length > 0) {
+             renderResults(data.collection);
         } else {
             contentArea.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 w-full">No results found.</div>';
         }
@@ -331,15 +334,8 @@ function renderResults(results) {
         
         const imgUrl = getImageUrl(item);
         
-        const name = item.name || item.title || 'Unknown';
-        let subText = '';
-        if (searchType === 'song') {
-            subText = item.primaryArtists || item.artist || '';
-        } else if (searchType === 'album') {
-            subText = item.year || item.artist || '';
-        } else if (searchType === 'artist') {
-             subText = 'Artist';
-        }
+        const name = item.song?.name || item.name || 'Unknown';
+        const subText = item.author?.name || item.primaryArtists || '';
 
         card.innerHTML = `
             <img src="${imgUrl}" alt="${name}" loading="lazy">
@@ -351,62 +347,28 @@ function renderResults(results) {
         `;
 
         card.addEventListener('click', () => {
-            if (searchType === 'song') {
-                playSong(item);
-            } else if (searchType === 'artist') {
-                loadArtistDetails(item.id, item);
-            } else if (searchType === 'album') {
-                 loadAlbumDetails(item.id);
-            }
+            playSong(item);
         });
 
         contentArea.appendChild(card);
     });
 }
 
-// Artist Details Logic
+// Artist Details Logic (Simplified for Argon)
 async function loadArtistDetails(artistId, artistObj) {
     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
-    contentArea.className = ''; // Remove grid
-    mainHeader.textContent = "Artist Details";
+    contentArea.className = ''; 
+    mainHeader.textContent = "Related Songs";
     
     try {
-        const artistRes = await fetch(`${API_BASE}/artists?id=${artistId}`);
-        const artistData = await artistRes.json();
-        const artist = artistData.data || {};
-        
-        let songs = artist.topSongs || [];
-        
-        // Removed the failing call to /artists/{artistId}/songs
-        // We will rely only on artist.topSongs
-
-        // Filter songs by artist name (strict check as requested)
-        const artistNameLower = artist.name.toLowerCase();
-        songs = songs.filter(song => {
-            const songPrimaryArtistsLower = (song.primaryArtists || song.artist || '').toLowerCase();
-            return songPrimaryArtistsLower.includes(artistNameLower);
-        });
-
-        // Advanced Sorting for Relevance:
-        // Prioritize: (1) higher playCount, (2) more recent year/releaseDate
-        songs.sort((a, b) => {
-            const playCountA = parseInt(a.playCount) || 0;
-            const playCountB = parseInt(b.playCount) || 0;
-            const yearA = parseInt(a.year) || 0;
-            const yearB = parseInt(b.year) || 0;
-
-            if (playCountA !== playCountB) {
-                return playCountB - playCountA; // Higher playCount first
-            }
-            return yearB - yearA; // More recent year first
-        });
-
-
-        renderArtistView(artist, songs);
-
+        // Argon doesn't have artist ID lookup, using name from object if available
+        const artistName = artistObj.author?.name || artistObj.name;
+        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(artistName)}&limit=20`);
+        const data = await res.json();
+        renderResults(data.collection);
     } catch (e) {
         console.error(e);
-        contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load artist details.</div>`;
+        contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
     }
 }
 
@@ -437,72 +399,67 @@ function renderArtistView(artist, songs) {
     });
 }
 
-function createSongRow(song) {
-    const imgUrl = getImageUrl(song);
-    const duration = song.duration ? formatTime(song.duration) : '';
-    const safeName = (song.name || '').replace(/"/g, '&quot;');
-    const isLiked = library.likedSongs.some(s => s.id === song.id);
+function createSongRow(item) {
+    const imgUrl = getImageUrl(item);
+    const song = item.song || item;
+    const author = item.author || { name: item.primaryArtists || '' };
+    
+    const durationStr = formatTime(song.duration);
+    const trackUrl = song.url;
+    const isLiked = library.likedSongs.some(s => (s.song?.url || s.url) === trackUrl);
+    
+    // Generate a safe ID for the DOM
+    const domId = btoa(trackUrl).substring(0, 16).replace(/[/+=]/g, '');
 
     return `
         <div class="song-row">
             <img src="${imgUrl}" loading="lazy">
             <div class="song-row-info">
                 <div class="song-row-title">${song.name}</div>
-                <div class="song-row-meta">${song.primaryArtists || song.artist || ''} • ${song.year || ''}</div>
+                <div class="song-row-meta">${author.name}</div>
             </div>
             <div class="song-row-actions flex items-center gap-4">
-                 <div class="song-row-meta">${duration}</div>
-                 <button id="like-${song.id}" class="${isLiked ? 'liked' : ''}" title="${isLiked ? 'Unlike' : 'Like'}">
+                 <div class="song-row-meta">${durationStr}</div>
+                 <button id="like-${domId}" class="${isLiked ? 'liked' : ''}" title="${isLiked ? 'Unlike' : 'Like'}">
                     <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>
                  </button>
-                <button id="play-${song.id}" title="Play"><i class="fas fa-play"></i></button>
+                <button id="play-${domId}" title="Play"><i class="fas fa-play"></i></button>
             </div>
         </div>
     `;
 }
 
-// Album Details
+// Album Details (Simplified for Argon)
 async function loadAlbumDetails(albumId) {
      contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
      contentArea.className = '';
-     mainHeader.textContent = "Album Details";
+     mainHeader.textContent = "Related Songs";
      try {
-        const res = await fetch(`${API_BASE}/albums?id=${albumId}`);
+        // Argon doesn't have album lookup, using search instead
+        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(albumId)}&limit=10`);
         const data = await res.json();
-        const album = data.data;
-        
-        renderArtistView({ 
-            name: album.name,
-            image: album.image,
-            followerCount: null,
-            isVerified: false
-        }, album.songs);
-
+        renderResults(data.collection);
      } catch(e) {
-          contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load album.</div>`;
+          contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
      }
 }
 
 // Player Logic
-function playSong(song) {
-    currentTrack = song;
+function playSong(item) {
+    currentTrack = item;
     
-    const imgUrl = getImageUrl(song);
+    const imgUrl = getImageUrl(item);
+    const songName = item.song?.name || item.name || 'Unknown';
+    const artistName = item.author?.name || item.primaryArtists || '';
+    const trackUrl = item.song?.url || item.url;
 
     let downloadUrl = '';
-    if (Array.isArray(song.downloadUrl)) {
-        const best = song.downloadUrl.find(d => d.quality === '320kbps') || song.downloadUrl[song.downloadUrl.length - 1];
-        downloadUrl = best.link;
-    } else {
-        downloadUrl = song.downloadUrl;
+    if (trackUrl) {
+        downloadUrl = `${API_BASE}/api/download?track_url=${encodeURIComponent(trackUrl)}`;
     }
 
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = song.name;
-    const decodedTitle = tempDiv.textContent;
-
-    playerTitle.textContent = decodedTitle;
-    playerArtist.textContent = song.primaryArtists || song.artist || '';
+    playerTitle.textContent = songName;
+    playerArtist.textContent = artistName;
     playerImg.src = imgUrl;
     
     audioPlayer.src = downloadUrl;
@@ -510,7 +467,7 @@ function playSong(song) {
     updatePlayerLikeIcon();
     
     downloadBtn.href = downloadUrl;
-    downloadBtn.setAttribute('download', `${decodedTitle}.mp3`);
+    downloadBtn.setAttribute('download', `${songName}.mp3`);
 
     playerBar.classList.remove('hidden');
     playerBar.style.display = 'flex'; 
@@ -543,18 +500,35 @@ function updateProgress() {
 
 // Helper: Get Image URL
 function getImageUrl(item) {
-    if (Array.isArray(item.image)) {
-        return item.image[item.image.length - 1].link; 
-    } else if (typeof item.image === 'string') {
-        return item.image;
-    } else {
-        return 'https://via.placeholder.com/150?text=No+Image';
+    if (item.song && item.song.img) {
+        let img = item.song.img.big || item.song.img.small;
+        if (img.startsWith('/api/')) {
+            return API_BASE + img;
+        }
+        return img;
     }
+    if (item.image) {
+        if (Array.isArray(item.image)) {
+            return item.image[item.image.length - 1].link; 
+        } else if (typeof item.image === 'string') {
+            return item.image;
+        }
+    }
+    return 'https://via.placeholder.com/150?text=No+Image';
 }
 
-function formatTime(seconds) {
-    const min = Math.floor(seconds / 60);
-    const sec = Math.floor(seconds % 60);
+function formatTime(val) {
+    if (typeof val === 'object' && val !== null) {
+        const h = val.hours || 0;
+        const m = val.minutes || 0;
+        const s = val.seconds || 0;
+        const totalSec = h * 3600 + m * 60 + s;
+        const displayMin = Math.floor(totalSec / 60);
+        const displaySec = totalSec % 60;
+        return `${displayMin}:${displaySec < 10 ? '0' : ''}${displaySec}`;
+    }
+    const min = Math.floor(val / 60) || 0;
+    const sec = Math.floor(val % 60) || 0;
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 }
 
