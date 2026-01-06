@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4SP - VELIUM</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../injector.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main class="messenger-container">
+        
+        <!-- SIDEBAR -->
+        <aside class="left-panel">
+            <div class="left-panel-scroll-content">
+                
+                <!-- BRAND / HEADER -->
+                <div class="mb-6 pb-4 border-b border-[#1a1a1a]">
+                    <h2 class="text-xl text-white mb-2 tracking-widest font-bold">VELIUM</h2>
+                    <p class="text-xs text-gray-500">Music Explorer</p>
+                </div>
+
+                <!-- SEARCH CONTROLS -->
+                <div class="mb-6 pb-4 border-b border-[#1a1a1a]">
+                    <h2 class="text-lg text-white mb-3">Search</h2>
+                    
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="search-box" placeholder="Find songs, artists..." class="flex-grow p-2 bg-black border border-[#333] rounded-md outline-none focus:border-indigo-500 text-white thin-font text-sm">
+                        <button id="search-btn" class="btn-icon" title="Search"><i class="fas fa-search"></i></button>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="search-type" value="song" class="hidden peer" checked>
+                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
+                                <i class="fas fa-music"></i> Songs
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="search-type" value="album" class="hidden peer">
+                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
+                                <i class="fas fa-compact-disc"></i> Albums
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="search-type" value="artist" class="hidden peer">
+                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
+                                <i class="fas fa-microphone-lines"></i> Artists
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- PLAYLISTS / LIBRARY -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-lg text-white">Library</h2>
+                        <button id="create-playlist-btn" class="text-gray-500 hover:text-white" title="New Playlist"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div id="library-list" class="compact-list-wrapper">
+                        <!-- Playlists injected here -->
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <section class="feed-panel">
+            <div class="feed-content-inner">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-2xl text-white" id="main-header">Home</h1>
+                </div>
+                
+                <div id="content-area" class="photo-grid">
+                    <!-- Results injected here -->
+                    <div class="col-span-full text-center text-gray-500 mt-20 w-full">
+                        <i class="fas fa-music text-4xl mb-4 opacity-50"></i>
+                        <p>Search for your favorite tracks or select a playlist.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- PLAYER BAR -->
+    <div id="player-bar" class="hidden">
+        <div class="player-info">
+            <img id="player-img" src="" alt="Cover">
+            <div class="player-text">
+                <span class="player-title" id="player-title">Song Title</span>
+                <span class="player-artist" id="player-artist">Artist Name</span>
+            </div>
+        </div>
+        
+        <div class="custom-player-controls">
+            <div class="control-buttons">
+                <button class="player-btn play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
+            </div>
+            <div class="progress-container">
+                <span id="current-time">0:00</span>
+                <input type="range" class="progress-bar" id="seek-slider" min="0" max="100" value="0">
+                <span id="total-duration">0:00</span>
+            </div>
+        </div>
+
+        <div class="volume-controls">
+             <i class="fas fa-volume-up"></i>
+             <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1">
+             <a href="#" id="download-btn" class="player-btn text-sm ml-2" target="_blank" title="Download"><i class="fas fa-download"></i></a>
+             <button id="player-like-btn" class="player-btn text-sm ml-2" title="Like"><i class="far fa-heart"></i></button>
+        </div>
+        
+        <audio id="audio-player" class="hidden"></audio>
+    </div>
+
+    <!-- LYRICS OVERLAY -->
+    <div id="lyrics-overlay">
+        <button class="close-lyrics" id="close-lyrics"><i class="fas fa-times"></i></button>
+        <div class="lyrics-content">
+            <h2 class="lyrics-title" id="lyrics-title">Title</h2>
+            <h3 class="lyrics-artist" id="lyrics-artist">Artist</h3>
+            <div class="lyrics-text" id="lyrics-text">Loading lyrics...</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,5 +1,4 @@
-const API_BASE = "https://argon.global.ssl.fastly.net";
-const API_SAAVN = "https://jiosaavn-api-privatecvc2.vercel.app";
+const API_BASE = "https://jiosaavn-api-privatecvc2.vercel.app";
 const LYRICS_API_BASE = "https://lyrics.lewdhutao.my.eu.org/v2/musixmatch/lyrics";
 
 // State
@@ -44,14 +43,8 @@ const totalDurationElem = document.getElementById('total-duration');
 const volumeSlider = document.getElementById('volume-slider');
 
 // Initialization
-try {
-    console.log("Initializing Velium Music...");
-    loadLibrary();
-    renderLibrary();
-    console.log("Initialization complete.");
-} catch (e) {
-    console.error("Initialization failed:", e);
-}
+loadLibrary();
+renderLibrary();
 
 // Event Listeners
 searchBtn.addEventListener('click', () => handleSearch());
@@ -139,56 +132,23 @@ function saveLibrary() {
     localStorage.setItem('velium_library', JSON.stringify(library));
 }
 
-function toggleLike(item) {
-    // Determine unique identifier
-    const trackUrl = item.song?.url || item.url;
-    const trackId = item.id; 
-
-    // Find index matching either URL or ID
-    const index = library.likedSongs.findIndex(s => {
-        const sUrl = s.song?.url || s.url;
-        const sId = s.id;
-        if (trackUrl && sUrl === trackUrl) return true;
-        if (trackId && sId === trackId) return true;
-        return false;
-    });
-
+function toggleLike(song) {
+    const index = library.likedSongs.findIndex(s => s.id === song.id);
     if (index > -1) {
         library.likedSongs.splice(index, 1);
         showToast("Removed from Liked Songs");
     } else {
         // Ensure we save a clean object
-        let cleanItem;
-        if (item.song) {
-             // New structure
-             cleanItem = {
-                song: {
-                    name: item.song.name || 'Unknown',
-                    url: item.song.url,
-                    img: item.song.img,
-                    duration: item.song.duration
-                },
-                author: {
-                    name: item.author?.name || ''
-                }
-            };
-        } else {
-            // Legacy or flat structure
-             cleanItem = {
-                id: item.id, // Keep ID for legacy
-                song: {
-                    name: item.name || item.title || 'Unknown',
-                    url: item.url || item.downloadUrl || '', // Try to find a URL
-                    img: { small: getImageUrl(item), big: getImageUrl(item) },
-                    duration: item.duration
-                },
-                author: {
-                    name: item.primaryArtists || item.artist || ''
-                }
-            };
-        }
-
-        library.likedSongs.unshift(cleanItem);
+        const cleanSong = {
+            id: song.id,
+            name: song.name || song.title,
+            primaryArtists: song.primaryArtists || song.artist || '',
+            image: song.image,
+            downloadUrl: song.downloadUrl,
+            year: song.year,
+            duration: song.duration
+        };
+        library.likedSongs.unshift(cleanSong);
         showToast("Added to Liked Songs");
     }
     saveLibrary();
@@ -203,8 +163,7 @@ function toggleLike(item) {
 
 function updatePlayerLikeIcon() {
     if (!currentTrack) return;
-    const trackUrl = currentTrack.song?.url || currentTrack.url;
-    const isLiked = library.likedSongs.some(s => (s.song?.url || s.url) === trackUrl);
+    const isLiked = library.likedSongs.some(s => s.id === currentTrack.id);
     playerLikeBtn.innerHTML = isLiked ? '<i class="fas fa-heart text-red-500"></i>' : '<i class="far fa-heart"></i>';
 }
 
@@ -215,7 +174,7 @@ function renderLibrary() {
     const likedDiv = document.createElement('div');
     likedDiv.className = 'compact-list-item flex items-center gap-2 p-2';
     
-    let coverUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+    let coverUrl = 'https://via.placeholder.com/40?text=Like';
     if (library.likedSongs.length > 0) {
         const first = library.likedSongs[0];
         coverUrl = getImageUrl(first);
@@ -236,7 +195,7 @@ function renderLibrary() {
         const div = document.createElement('div');
         div.className = 'compact-list-item flex items-center gap-2 p-2';
         
-        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        let plCover = 'https://via.placeholder.com/40?text=PL';
         if (pl.songs.length > 0) {
              plCover = getImageUrl(pl.songs[0]);
         }
@@ -257,6 +216,9 @@ function openLikedSongs() {
     mainHeader.textContent = "Liked Songs";
     contentArea.className = ''; // Remove grid class
     
+    // Header for playlist view
+    const lastUpdated = library.likedSongs.length > 0 ? "Just now" : "Never"; // Simplified for now
+    
     let html = `
         <div class="artist-header">
             <div class="w-32 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-4xl shadow-lg">
@@ -268,7 +230,7 @@ function openLikedSongs() {
             </div>
         </div>
         <div class="song-list">
-            ${library.likedSongs.map(item => createSongRow(item)).join('')}
+            ${library.likedSongs.map(song => createSongRow(song)).join('')}
         </div>
     `;
     
@@ -279,18 +241,11 @@ function openLikedSongs() {
     contentArea.innerHTML = html;
     
     // Attach events
-    library.likedSongs.forEach(item => {
-        const song = item.song || item;
-        const author = item.author || { name: item.primaryArtists || '' };
-        const trackUrl = song.url || item.url;
-        let uniqueId = item.id || trackUrl || (song.name + author.name);
-        if (!uniqueId) uniqueId = 'unknown'; // Fallback that is at least consistent
-        const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
-
-        const btn = document.getElementById(`play-${domId}`);
-        const likeBtn = document.getElementById(`like-${domId}`);
-        if (btn) btn.addEventListener('click', () => playSong(item));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
+    library.likedSongs.forEach(song => {
+        const btn = document.getElementById(`play-${song.id}`);
+        const likeBtn = document.getElementById(`like-${song.id}`);
+        if (btn) btn.addEventListener('click', () => playSong(song));
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(song));
     });
 }
 
@@ -314,7 +269,7 @@ function openPlaylist(playlistId) {
             </div>
         </div>
         <div class="song-list">
-            ${pl.songs.map(item => createSongRow(item)).join('')}
+            ${pl.songs.map(song => createSongRow(song)).join('')}
         </div>
     `;
 
@@ -324,21 +279,15 @@ function openPlaylist(playlistId) {
 
     contentArea.innerHTML = html;
     
-    // Attach events
-     pl.songs.forEach(item => {
-        const song = item.song || item;
-        const author = item.author || { name: item.primaryArtists || '' };
-        const trackUrl = song.url || item.url;
-        let uniqueId = item.id || trackUrl || (song.name + author.name);
-        if (!uniqueId) uniqueId = 'unknown';
-        const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
-        
-        const btn = document.getElementById(`play-${domId}`);
-        const likeBtn = document.getElementById(`like-${domId}`);
-        if (btn) btn.addEventListener('click', () => playSong(item));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
+    // Attach events (similar to liked songs)
+     pl.songs.forEach(song => {
+        const btn = document.getElementById(`play-${song.id}`);
+        const likeBtn = document.getElementById(`like-${song.id}`);
+        if (btn) btn.addEventListener('click', () => playSong(song));
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(song));
     });
 }
+
 
 // Search Logic
 async function handleSearch() {
@@ -346,68 +295,28 @@ async function handleSearch() {
     if (!query) return;
     lastQuery = query;
 
-    console.log(`Searching for: ${query} (Type: ${searchType})`);
-
     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
     contentArea.className = 'photo-grid'; // Restore grid for search results
     mainHeader.textContent = `Results for "${query}"`;
 
     try {
-        // 1. Argon Search
-        let argonQuery = query;
-        if (searchType !== 'song') {
-            argonQuery += ` ${searchType}`;
-        }
-        const argonUrl = `${API_BASE}/api/search?query=${encodeURIComponent(argonQuery)}&limit=20`;
-        const argonPromise = fetch(argonUrl)
-            .then(res => res.ok ? res.json() : { collection: [] })
-            .catch(e => {
-                console.error("Argon search failed", e);
-                return { collection: [] };
-            });
-
-        // 2. Saavn Search
-        const saavnUrl = `${API_SAAVN}/search/${searchType}s?query=${encodeURIComponent(query)}`;
-        const saavnPromise = fetch(saavnUrl)
-            .then(res => res.ok ? res.json() : { data: [] })
-            .catch(e => {
-                console.error("Saavn search failed", e);
-                return { data: [] };
-            });
-
-        const [argonRes, saavnRes] = await Promise.all([argonPromise, saavnPromise]);
-
-        let combinedResults = [];
-
-        // Process Argon
-        if (argonRes.collection && Array.isArray(argonRes.collection)) {
-            combinedResults.push(...argonRes.collection);
-        }
-
-        // Process Saavn
-        if (saavnRes.data) {
-             const saavnItems = saavnRes.data.results || saavnRes.data;
-             if (Array.isArray(saavnItems)) {
-                 combinedResults.push(...saavnItems);
-             }
-        }
-
-        console.log(`Combined results: ${combinedResults.length} items`);
+        let url = `${API_BASE}/search/${searchType}s?query=${encodeURIComponent(query)}`;
+        const res = await fetch(url);
+        const data = await res.json();
         
-        if (combinedResults.length > 0) {
-             renderResults(combinedResults);
+        if (data.status === 'SUCCESS' || data.success || data.data) {
+             let results = data.data.results || data.data;
+             renderResults(results);
         } else {
-            console.log("No results found in data.collection or saavn data");
             contentArea.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 w-full">No results found.</div>';
         }
     } catch (e) {
-        console.error("Search failed:", e);
+        console.error(e);
         contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 mt-10 w-full">Error: ${e.message}</div>`;
     }
 }
 
 function renderResults(results) {
-    console.log(`Rendering ${results.length} results`);
     if (!results || results.length === 0) {
         contentArea.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 w-full">No results found.</div>';
         return;
@@ -416,52 +325,88 @@ function renderResults(results) {
     currentResults = results; 
     contentArea.innerHTML = ''; 
 
-    results.forEach((item, idx) => {
-        try {
-            const card = document.createElement('div');
-            card.className = 'photo-thumbnail'; // Using the Photo Grid class
-            
-            const imgUrl = getImageUrl(item);
-            const name = item.song?.name || item.name || 'Unknown';
-            const subText = item.author?.name || item.primaryArtists || '';
-            
-            console.log(`Item ${idx}: Name="${name}", Sub="${subText}", Img="${imgUrl}"`);
-
-            card.innerHTML = `
-                <img src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
-                <div class="overlay"></div>
-                <div class="title-overlay">
-                    <h3>${name}</h3>
-                    <p>${subText}</p>
-                </div>
-            `;
-
-            card.addEventListener('click', () => {
-                playSong(item);
-            });
-
-            contentArea.appendChild(card);
-        } catch (err) {
-            console.error(`Error rendering item ${idx}:`, item, err);
+    results.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'photo-thumbnail'; // Using the Photo Grid class
+        
+        const imgUrl = getImageUrl(item);
+        
+        const name = item.name || item.title || 'Unknown';
+        let subText = '';
+        if (searchType === 'song') {
+            subText = item.primaryArtists || item.artist || '';
+        } else if (searchType === 'album') {
+            subText = item.year || item.artist || '';
+        } else if (searchType === 'artist') {
+             subText = 'Artist';
         }
+
+        card.innerHTML = `
+            <img src="${imgUrl}" alt="${name}" loading="lazy">
+            <div class="overlay"></div>
+            <div class="title-overlay">
+                <h3>${name}</h3>
+                <p>${subText}</p>
+            </div>
+        `;
+
+        card.addEventListener('click', () => {
+            if (searchType === 'song') {
+                playSong(item);
+            } else if (searchType === 'artist') {
+                loadArtistDetails(item.id, item);
+            } else if (searchType === 'album') {
+                 loadAlbumDetails(item.id);
+            }
+        });
+
+        contentArea.appendChild(card);
     });
 }
 
-// Artist Details Logic (Simplified for Argon)
+// Artist Details Logic
 async function loadArtistDetails(artistId, artistObj) {
     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
-    contentArea.className = ''; 
-    mainHeader.textContent = "Related Songs";
+    contentArea.className = ''; // Remove grid
+    mainHeader.textContent = "Artist Details";
     
     try {
-        // Argon doesn't have artist ID lookup, using name from object if available
-        const artistName = artistObj.author?.name || artistObj.name;
-        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(artistName)}&limit=20`);
-        const data = await res.json();
-        renderResults(data.collection);
+        const artistRes = await fetch(`${API_BASE}/artists?id=${artistId}`);
+        const artistData = await artistRes.json();
+        const artist = artistData.data || {};
+        
+        let songs = artist.topSongs || [];
+        
+        // Removed the failing call to /artists/{artistId}/songs
+        // We will rely only on artist.topSongs
+
+        // Filter songs by artist name (strict check as requested)
+        const artistNameLower = artist.name.toLowerCase();
+        songs = songs.filter(song => {
+            const songPrimaryArtistsLower = (song.primaryArtists || song.artist || '').toLowerCase();
+            return songPrimaryArtistsLower.includes(artistNameLower);
+        });
+
+        // Advanced Sorting for Relevance:
+        // Prioritize: (1) higher playCount, (2) more recent year/releaseDate
+        songs.sort((a, b) => {
+            const playCountA = parseInt(a.playCount) || 0;
+            const playCountB = parseInt(b.playCount) || 0;
+            const yearA = parseInt(a.year) || 0;
+            const yearB = parseInt(b.year) || 0;
+
+            if (playCountA !== playCountB) {
+                return playCountB - playCountA; // Higher playCount first
+            }
+            return yearB - yearA; // More recent year first
+        });
+
+
+        renderArtistView(artist, songs);
+
     } catch (e) {
         console.error(e);
-        contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
+        contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load artist details.</div>`;
     }
 }
 
@@ -484,128 +429,88 @@ function renderArtistView(artist, songs) {
     
     contentArea.innerHTML = html;
 
-    songs.forEach(item => {
-        const song = item.song || item;
-        const author = item.author || { name: item.primaryArtists || '' };
-        const trackUrl = song.url || item.url;
-        let uniqueId = item.id || trackUrl || (song.name + author.name);
-        if (!uniqueId) uniqueId = 'unknown';
-        const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
-
-        const btn = document.getElementById(`play-${domId}`);
-        const likeBtn = document.getElementById(`like-${domId}`);
-        if (btn) btn.addEventListener('click', () => playSong(item));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
+    songs.forEach(song => {
+        const btn = document.getElementById(`play-${song.id}`);
+        const likeBtn = document.getElementById(`like-${song.id}`);
+        if (btn) btn.addEventListener('click', () => playSong(song));
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(song));
     });
 }
 
-function createSongRow(item) {
-    const imgUrl = getImageUrl(item);
-    const song = item.song || item;
-    const author = item.author || { name: item.primaryArtists || '' };
-    
-    const durationStr = formatTime(song.duration);
-    const trackUrl = song.url || item.url; // Kept for logic check
-    
-    // Check if liked using ID or URL
-    const isLiked = library.likedSongs.some(s => {
-        const sUrl = s.song?.url || s.url;
-        const sId = s.id;
-        // Check ID match (Saavn)
-        if (item.id && sId === item.id) return true;
-        // Check URL match (Argon)
-        if (trackUrl && sUrl === trackUrl) return true;
-        return false;
-    });
-    
-    // Generate a safe ID for the DOM
-    let uniqueId = item.id || trackUrl || (song.name + author.name);
-    if (!uniqueId) uniqueId = 'unknown-' + Math.random();
-    const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
+function createSongRow(song) {
+    const imgUrl = getImageUrl(song);
+    const duration = song.duration ? formatTime(song.duration) : '';
+    const safeName = (song.name || '').replace(/"/g, '&quot;');
+    const isLiked = library.likedSongs.some(s => s.id === song.id);
 
     return `
         <div class="song-row">
             <img src="${imgUrl}" loading="lazy">
             <div class="song-row-info">
                 <div class="song-row-title">${song.name}</div>
-                <div class="song-row-meta">${author.name}</div>
+                <div class="song-row-meta">${song.primaryArtists || song.artist || ''} • ${song.year || ''}</div>
             </div>
             <div class="song-row-actions flex items-center gap-4">
-                 <div class="song-row-meta">${durationStr}</div>
-                 <button id="like-${domId}" class="${isLiked ? 'liked' : ''}" title="${isLiked ? 'Unlike' : 'Like'}">
+                 <div class="song-row-meta">${duration}</div>
+                 <button id="like-${song.id}" class="${isLiked ? 'liked' : ''}" title="${isLiked ? 'Unlike' : 'Like'}">
                     <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>
                  </button>
-                <button id="play-${domId}" title="Play"><i class="fas fa-play"></i></button>
+                <button id="play-${song.id}" title="Play"><i class="fas fa-play"></i></button>
             </div>
         </div>
     `;
 }
 
-// Album Details (Simplified for Argon)
+// Album Details
 async function loadAlbumDetails(albumId) {
      contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
      contentArea.className = '';
-     mainHeader.textContent = "Related Songs";
+     mainHeader.textContent = "Album Details";
      try {
-        // Argon doesn't have album lookup, using search instead
-        const res = await fetch(`${API_BASE}/api/search?query=${encodeURIComponent(albumId)}&limit=10`);
+        const res = await fetch(`${API_BASE}/albums?id=${albumId}`);
         const data = await res.json();
-        renderResults(data.collection);
+        const album = data.data;
+        
+        renderArtistView({ 
+            name: album.name,
+            image: album.image,
+            followerCount: null,
+            isVerified: false
+        }, album.songs);
+
      } catch(e) {
-          contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
+          contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load album.</div>`;
      }
 }
 
 // Player Logic
-function playSong(item) {
-    currentTrack = item;
+function playSong(song) {
+    currentTrack = song;
     
-    const imgUrl = getImageUrl(item);
-    const songName = item.song?.name || item.name || 'Unknown';
-    const artistName = item.author?.name || item.primaryArtists || '';
+    const imgUrl = getImageUrl(song);
 
     let downloadUrl = '';
-
-    // Saavn Logic (Fresh search result)
-    if (item.downloadUrl) {
-        if (Array.isArray(item.downloadUrl)) {
-             const best = item.downloadUrl.find(d => d.quality === '320kbps') || item.downloadUrl[item.downloadUrl.length - 1];
-             downloadUrl = best.link;
-        } else {
-             downloadUrl = item.downloadUrl;
-        }
-    } 
-    // Argon Logic OR Saved Saavn Item
-    else {
-        const trackUrl = item.song?.url || item.url;
-        if (trackUrl) {
-            if (Array.isArray(trackUrl)) {
-                 const best = trackUrl.find(d => d.quality === '320kbps') || trackUrl[trackUrl.length - 1];
-                 downloadUrl = best.link;
-            }
-            else if (typeof trackUrl === 'string' && trackUrl.startsWith('http')) {
-                downloadUrl = trackUrl;
-            } else {
-                downloadUrl = `${API_BASE}/api/download?track_url=${encodeURIComponent(trackUrl)}`;
-            }
-        }
+    if (Array.isArray(song.downloadUrl)) {
+        const best = song.downloadUrl.find(d => d.quality === '320kbps') || song.downloadUrl[song.downloadUrl.length - 1];
+        downloadUrl = best.link;
+    } else {
+        downloadUrl = song.downloadUrl;
     }
 
-    playerTitle.textContent = songName;
-    playerArtist.textContent = artistName;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = song.name;
+    const decodedTitle = tempDiv.textContent;
+
+    playerTitle.textContent = decodedTitle;
+    playerArtist.textContent = song.primaryArtists || song.artist || '';
     playerImg.src = imgUrl;
     
     audioPlayer.src = downloadUrl;
-    const playPromise = audioPlayer.play();
-    if (playPromise !== undefined) {
-        playPromise.catch(error => {
-            console.log("Playback interrupted or prevented:", error);
-        });
-    }
+    audioPlayer.play();
     updatePlayerLikeIcon();
     
     downloadBtn.href = downloadUrl;
-    downloadBtn.setAttribute('download', `${songName}.mp3`);
+    downloadBtn.setAttribute('download', `${decodedTitle}.mp3`);
 
     playerBar.classList.remove('hidden');
     playerBar.style.display = 'flex'; 
@@ -638,35 +543,18 @@ function updateProgress() {
 
 // Helper: Get Image URL
 function getImageUrl(item) {
-    if (item.song && item.song.img) {
-        let img = item.song.img.big || item.song.img.small;
-        if (img.startsWith('/api/')) {
-            return API_BASE + img;
-        }
-        return img;
+    if (Array.isArray(item.image)) {
+        return item.image[item.image.length - 1].link; 
+    } else if (typeof item.image === 'string') {
+        return item.image;
+    } else {
+        return 'https://via.placeholder.com/150?text=No+Image';
     }
-    if (item.image) {
-        if (Array.isArray(item.image)) {
-            return item.image[item.image.length - 1].link; 
-        } else if (typeof item.image === 'string') {
-            return item.image;
-        }
-    }
-    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 }
 
-function formatTime(val) {
-    if (typeof val === 'object' && val !== null) {
-        const h = val.hours || 0;
-        const m = val.minutes || 0;
-        const s = val.seconds || 0;
-        const totalSec = h * 3600 + m * 60 + s;
-        const displayMin = Math.floor(totalSec / 60);
-        const displaySec = totalSec % 60;
-        return `${displayMin}:${displaySec < 10 ? '0' : ''}${displaySec}`;
-    }
-    const min = Math.floor(val / 60) || 0;
-    const sec = Math.floor(val % 60) || 0;
+function formatTime(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 }
 
