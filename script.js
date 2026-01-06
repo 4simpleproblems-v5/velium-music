@@ -43,8 +43,14 @@ const totalDurationElem = document.getElementById('total-duration');
 const volumeSlider = document.getElementById('volume-slider');
 
 // Initialization
-loadLibrary();
-renderLibrary();
+try {
+    console.log("Initializing Velium Music...");
+    loadLibrary();
+    renderLibrary();
+    console.log("Initialization complete.");
+} catch (e) {
+    console.error("Initialization failed:", e);
+}
 
 // Event Listeners
 searchBtn.addEventListener('click', () => handleSearch());
@@ -133,24 +139,54 @@ function saveLibrary() {
 }
 
 function toggleLike(item) {
+    // Determine unique identifier
     const trackUrl = item.song?.url || item.url;
-    const index = library.likedSongs.findIndex(s => (s.song?.url || s.url) === trackUrl);
+    const trackId = item.id; 
+
+    // Find index matching either URL or ID
+    const index = library.likedSongs.findIndex(s => {
+        const sUrl = s.song?.url || s.url;
+        const sId = s.id;
+        if (trackUrl && sUrl === trackUrl) return true;
+        if (trackId && sId === trackId) return true;
+        return false;
+    });
+
     if (index > -1) {
         library.likedSongs.splice(index, 1);
         showToast("Removed from Liked Songs");
     } else {
         // Ensure we save a clean object
-        const cleanItem = {
-            song: {
-                name: item.song?.name || item.name || 'Unknown',
-                url: trackUrl,
-                img: item.song?.img || { small: item.image, big: item.image },
-                duration: item.song?.duration || item.duration
-            },
-            author: {
-                name: item.author?.name || item.primaryArtists || ''
-            }
-        };
+        let cleanItem;
+        if (item.song) {
+             // New structure
+             cleanItem = {
+                song: {
+                    name: item.song.name || 'Unknown',
+                    url: item.song.url,
+                    img: item.song.img,
+                    duration: item.song.duration
+                },
+                author: {
+                    name: item.author?.name || ''
+                }
+            };
+        } else {
+            // Legacy or flat structure
+             cleanItem = {
+                id: item.id, // Keep ID for legacy
+                song: {
+                    name: item.name || item.title || 'Unknown',
+                    url: item.url || item.downloadUrl || '', // Try to find a URL
+                    img: { small: getImageUrl(item), big: getImageUrl(item) },
+                    duration: item.duration
+                },
+                author: {
+                    name: item.primaryArtists || item.artist || ''
+                }
+            };
+        }
+
         library.likedSongs.unshift(cleanItem);
         showToast("Added to Liked Songs");
     }
@@ -178,7 +214,7 @@ function renderLibrary() {
     const likedDiv = document.createElement('div');
     likedDiv.className = 'compact-list-item flex items-center gap-2 p-2';
     
-    let coverUrl = 'https://via.placeholder.com/40?text=Like';
+    let coverUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
     if (library.likedSongs.length > 0) {
         const first = library.likedSongs[0];
         coverUrl = getImageUrl(first);
@@ -199,7 +235,7 @@ function renderLibrary() {
         const div = document.createElement('div');
         div.className = 'compact-list-item flex items-center gap-2 p-2';
         
-        let plCover = 'https://via.placeholder.com/40?text=PL';
+        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
         if (pl.songs.length > 0) {
              plCover = getImageUrl(pl.songs[0]);
         }
@@ -299,27 +335,34 @@ async function handleSearch() {
     if (!query) return;
     lastQuery = query;
 
+    console.log(`Searching for: ${query} (Type: ${searchType})`);
+
     contentArea.innerHTML = '<div class="loader"><i class="fas fa-circle-notch fa-spin fa-3x"></i></div>';
     contentArea.className = 'photo-grid'; // Restore grid for search results
     mainHeader.textContent = `Results for "${query}"`;
 
     try {
         let url = `${API_BASE}/api/search?query=${encodeURIComponent(query)}&limit=20`;
+        console.log(`Fetching: ${url}`);
         const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
+        console.log("Search results:", data);
         
         if (data.collection && data.collection.length > 0) {
              renderResults(data.collection);
         } else {
+            console.log("No results found in data.collection");
             contentArea.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 w-full">No results found.</div>';
         }
     } catch (e) {
-        console.error(e);
+        console.error("Search failed:", e);
         contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 mt-10 w-full">Error: ${e.message}</div>`;
     }
 }
 
 function renderResults(results) {
+    console.log(`Rendering ${results.length} results`);
     if (!results || results.length === 0) {
         contentArea.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 w-full">No results found.</div>';
         return;
@@ -328,29 +371,33 @@ function renderResults(results) {
     currentResults = results; 
     contentArea.innerHTML = ''; 
 
-    results.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'photo-thumbnail'; // Using the Photo Grid class
-        
-        const imgUrl = getImageUrl(item);
-        
-        const name = item.song?.name || item.name || 'Unknown';
-        const subText = item.author?.name || item.primaryArtists || '';
+    results.forEach((item, idx) => {
+        try {
+            const card = document.createElement('div');
+            card.className = 'photo-thumbnail'; // Using the Photo Grid class
+            
+            const imgUrl = getImageUrl(item);
+            
+            const name = item.song?.name || item.name || 'Unknown';
+            const subText = item.author?.name || item.primaryArtists || '';
 
-        card.innerHTML = `
-            <img src="${imgUrl}" alt="${name}" loading="lazy">
-            <div class="overlay"></div>
-            <div class="title-overlay">
-                <h3>${name}</h3>
-                <p>${subText}</p>
-            </div>
-        `;
+            card.innerHTML = `
+                <img src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='">
+                <div class="overlay"></div>
+                <div class="title-overlay">
+                    <h3>${name}</h3>
+                    <p>${subText}</p>
+                </div>
+            `;
 
-        card.addEventListener('click', () => {
-            playSong(item);
-        });
+            card.addEventListener('click', () => {
+                playSong(item);
+            });
 
-        contentArea.appendChild(card);
+            contentArea.appendChild(card);
+        } catch (err) {
+            console.error(`Error rendering item ${idx}:`, item, err);
+        }
     });
 }
 
@@ -514,7 +561,7 @@ function getImageUrl(item) {
             return item.image;
         }
     }
-    return 'https://via.placeholder.com/150?text=No+Image';
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 }
 
 function formatTime(val) {
