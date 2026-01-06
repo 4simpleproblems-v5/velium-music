@@ -591,3 +591,182 @@ async function loadAlbumDetails(albumId) {
           contentArea.innerHTML = `<div class="col-span-full text-center text-red-500 w-full">Failed to load.</div>`;
      }
 }
+
+// Player Logic
+function playSong(item) {
+    currentTrack = item;
+    
+    const imgUrl = getImageUrl(item);
+    const songName = item.song?.name || item.name || 'Unknown';
+    const artistName = item.author?.name || item.primaryArtists || '';
+
+    let downloadUrl = '';
+
+    // 1. Explicit Download URL (Saavn fresh result)
+    if (item.downloadUrl && Array.isArray(item.downloadUrl)) {
+        const best = item.downloadUrl.find(d => d.quality === '320kbps') || item.downloadUrl[item.downloadUrl.length - 1];
+        downloadUrl = best.link;
+    }
+    // 2. Explicit Download URL (Saavn string legacy/fallback)
+    else if (typeof item.downloadUrl === 'string') {
+        downloadUrl = item.downloadUrl;
+    }
+    else {
+        // Check potential URL fields
+        const possibleUrl = item.song?.url || item.url;
+        
+        if (possibleUrl) {
+             if (typeof possibleUrl === 'string' && (possibleUrl.includes('saavncdn.com') || possibleUrl.match(/\.(mp3|mp4|m4a)$/i))) {
+                 downloadUrl = possibleUrl;
+             }
+             else if (Array.isArray(possibleUrl)) {
+                 const best = possibleUrl.find(d => d.quality === '320kbps') || possibleUrl[possibleUrl.length - 1];
+                 downloadUrl = best.link;
+             }
+             else {
+                 downloadUrl = `${API_BASE}/api/download?track_url=${encodeURIComponent(possibleUrl)}`;
+             }
+        }
+    }
+
+    console.log(`Playing: ${songName} | URL: ${downloadUrl}`);
+
+    if (playerTitle) playerTitle.textContent = songName;
+    if (playerArtist) playerArtist.textContent = artistName;
+    if (playerImg) playerImg.src = imgUrl;
+    
+    if (audioPlayer) {
+        audioPlayer.src = downloadUrl;
+        const playPromise = audioPlayer.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.log("Playback interrupted or prevented:", error);
+            });
+        }
+    }
+    updatePlayerLikeIcon();
+    
+    if (downloadBtn) {
+        downloadBtn.href = downloadUrl;
+        downloadBtn.setAttribute('download', `${songName}.mp3`);
+    }
+
+    if (playerBar) {
+        playerBar.classList.remove('hidden');
+        playerBar.style.display = 'flex'; 
+    }
+}
+
+function togglePlay() {
+    if (audioPlayer.paused) {
+        audioPlayer.play();
+    } else {
+        audioPlayer.pause();
+    }
+}
+
+function updatePlayBtn() {
+    if (isPlaying) {
+        playPauseBtn.innerHTML = '<i class="fas fa-pause-circle"></i>';
+    } else {
+        playPauseBtn.innerHTML = '<i class="fas fa-play-circle"></i>';
+    }
+}
+
+function updateProgress() {
+    const { currentTime, duration } = audioPlayer;
+    if (isNaN(duration)) return;
+    
+    const progressPercent = (currentTime / duration) * 100;
+    seekSlider.value = currentTime;
+    currentTimeElem.textContent = formatTime(currentTime);
+}
+
+function getImageUrl(item) {
+    if (item.song && item.song.img) {
+        let img = item.song.img.big || item.song.img.small;
+        if (img.startsWith('/api/')) {
+            return API_BASE + img;
+        }
+        return img;
+    }
+    if (item.image) {
+        if (Array.isArray(item.image)) {
+            return item.image[item.image.length - 1].link; 
+        } else if (typeof item.image === 'string') {
+            return item.image;
+        }
+    }
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+}
+
+function formatTime(val) {
+    if (typeof val === 'object' && val !== null) {
+        const h = val.hours || 0;
+        const m = val.minutes || 0;
+        const s = val.seconds || 0;
+        const totalSec = h * 3600 + m * 60 + s;
+        const displayMin = Math.floor(totalSec / 60);
+        const displaySec = totalSec % 60;
+        return `${displayMin}:${displaySec < 10 ? '0' : ''}${displaySec}`;
+    }
+    const min = Math.floor(val / 60) || 0;
+    const sec = Math.floor(val % 60) || 0;
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num;
+}
+
+function showToast(msg) {
+    const div = document.createElement('div');
+    div.className = 'fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg text-sm z-50 animate-fade-in';
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 2000);
+}
+
+// Lyrics Logic (Triggered by button usually, now only via manual call if implemented elsewhere or restored)
+async function openLyrics() {
+    if (!currentTrack) return;
+
+    lyricsOverlay.classList.add('active');
+    lyricsTitle.textContent = currentTrack.name;
+    lyricsArtist.textContent = currentTrack.primaryArtists || currentTrack.artist || '';
+    lyricsText.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
+
+    const decodeHtml = (html) => {
+        const txt = document.createElement("textarea");
+        txt.innerHTML = html;
+        return txt.value;
+    };
+
+    let artistName = currentTrack.primaryArtists || currentTrack.artist || '';
+    artistName = decodeHtml(artistName);
+    if (artistName.includes(',')) artistName = artistName.split(',')[0].trim();
+    
+    let trackName = currentTrack.name;
+    trackName = decodeHtml(trackName);
+    trackName = trackName.replace(/\s*\(.*? (feat|ft|from|cover|remix).*?\)/gi, '');
+    trackName = trackName.replace(/\s*\[.*?\]/gi, ''); 
+    trackName = trackName.trim();
+
+    const url = `${LYRICS_API_BASE}?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}`;
+
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        if (json.data && json.data.lyrics) {
+            lyricsText.textContent = json.data.lyrics;
+        } else {
+            lyricsText.textContent = "Lyrics not found.";
+        }
+    } catch (e) {
+        console.error(e);
+        lyricsText.textContent = "Failed to load lyrics.";
+    }
+}
