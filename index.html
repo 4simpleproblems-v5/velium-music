@@ -10,87 +10,259 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
 
-    <main class="messenger-container">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'deep-black': '#040404',
+                        'card-dark': '#111111',
+                        'accent-indigo': '#4f46e5',
+                        'brand-border': '#252525',
+                    },
+                    fontFamily: {
+                        sans: ['Geist', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            font-family: 'Geist', sans-serif; 
+            background-color: #040404; 
+            color: #d1d5db; 
+            font-weight: 300; 
+            padding-bottom: 120px; /* Space for player */
+        }
+
+        /* --- Global Scrollbar --- */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* --- Toolbar Button Style --- */
+        .btn-toolbar-style {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 14px;
+            color: #d1d5db;
+            padding: 0.5rem 1.25rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .btn-toolbar-style:hover {
+            border-color: #fff;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        .btn-toolbar-style.active {
+            background-color: rgba(79, 70, 229, 0.1);
+            border-color: #4f46e5;
+            color: #4f46e5;
+        }
+
+        /* --- Search Bar --- */
+        #search-container {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        #search-container:focus-within {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.15);
+            border-color: #4f46e5;
+        }
+
+        /* --- Player Bar (Fixed Dark Style) --- */
+        #player-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 90px;
+            background-color: rgba(0,0,0,0.95);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            transition: background-color 0.5s ease;
+        }
+
+        .player-info { display: flex; align-items: center; gap: 1rem; width: 300px; }
+        .player-info img { 
+            width: 56px; height: 56px; 
+            border-radius: 0.5rem; 
+            border: 1px solid rgba(255,255,255,0.1);
+            object-fit: cover;
+        }
+        .player-text { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .player-artist { color: rgba(255,255,255,0.7); font-size: 0.75rem; }
+
+        .custom-player-controls {
+            flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; max-width: 600px;
+        }
+        .control-buttons { display: flex; gap: 2rem; align-items: center; }
+        .player-btn { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1.2rem; cursor: pointer; transition: all 0.2s; }
+        .player-btn:hover { color: white; transform: scale(1.1); }
+        .play-btn { color: white; font-size: 2.5rem; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
+        .play-btn:hover { transform: scale(1.1); }
+
+        .progress-container { width: 100%; display: flex; align-items: center; gap: 1rem; color: rgba(255,255,255,0.7); font-size: 0.75rem; }
+        .progress-bar {
+            flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;
+            -webkit-appearance: none; outline: none; cursor: pointer;
+        }
+        .progress-bar::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 10px; height: 10px; background: white; border-radius: 50%; opacity: 0; transition: opacity 0.2s;
+        }
+        .progress-container:hover .progress-bar::-webkit-slider-thumb { opacity: 1; }
+
+        .volume-controls { display: flex; align-items: center; gap: 1rem; width: 200px; justify-content: flex-end; color: rgba(255,255,255,0.6); }
+        .volume-slider { width: 80px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; -webkit-appearance: none; outline: none; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: rgba(255,255,255,0.8); border-radius: 50%; }
+
+        /* --- Modals --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px); z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
-        <!-- SIDEBAR -->
-        <aside class="left-panel">
-            <div class="left-panel-scroll-content">
-                
-                <!-- BRAND / HEADER -->
-                <div class="mb-6 pb-4 border-b border-[#1a1a1a]">
-                    <h2 class="text-xl text-white mb-2 tracking-widest font-bold">VELIUM</h2>
-                    <p class="text-xs text-gray-500">Music Explorer</p>
+        .modal-content {
+            background: #111; border: 1px solid #333;
+            border-radius: 16px; padding: 24px;
+            width: 90%; max-width: 400px;
+            transform: scale(0.95); transition: transform 0.2s;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+
+        .modal-input {
+            width: 100%; background: #000; border: 1px solid #333;
+            color: white; padding: 12px; border-radius: 8px;
+            margin: 16px 0; outline: none;
+        }
+        .modal-input:focus { border-color: #4f46e5; }
+
+        .modal-btn {
+            width: 100%; padding: 12px; border-radius: 8px;
+            font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary { background: transparent; color: #9ca3af; border: 1px solid #333; margin-top: 8px; }
+        .btn-secondary:hover { border-color: #fff; color: white; }
+
+        /* --- Library Drawer List Items --- */
+        .compact-list-item {
+            border-radius: 0.5rem; 
+            margin-bottom: 2px;
+            padding: 0.5rem; 
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .compact-list-item:hover { background-color: #1a1a1a; }
+
+        /* --- Animations --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        .loader { display: flex; justify-content: center; align-items: center; height: 200px; color: #4f46e5; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Top Navigation / Toolbar -->
+    <header class="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md z-40 border-b border-brand-border h-16 flex items-center justify-between px-6">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl text-white tracking-widest font-bold mr-4">VELIUM</h1>
+            
+            <label class="cursor-pointer">
+                <input type="radio" name="search-type" value="song" class="hidden peer" checked>
+                <div class="btn-toolbar-style peer-checked:active">
+                    <i class="fas fa-music"></i> Songs
                 </div>
-
-                <!-- SEARCH CONTROLS -->
-                <div class="mb-6 pb-4 border-b border-[#1a1a1a]">
-                    <h2 class="text-lg text-white mb-3">Search</h2>
-                    
-                    <div class="flex gap-2 mb-3">
-                        <input type="text" id="search-box" placeholder="Find songs, artists..." class="flex-grow p-2 bg-black border border-[#333] rounded-md outline-none focus:border-indigo-500 text-white thin-font text-sm">
-                        <button id="search-btn" class="btn-icon" title="Search"><i class="fas fa-search"></i></button>
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="search-type" value="song" class="hidden peer" checked>
-                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
-                                <i class="fas fa-music"></i> Songs
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="search-type" value="album" class="hidden peer">
-                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
-                                <i class="fas fa-compact-disc"></i> Albums
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="search-type" value="artist" class="hidden peer">
-                            <div class="btn-toolbar-style w-full peer-checked:active peer-checked:bg-indigo-900/10 peer-checked:border-indigo-500 peer-checked:text-indigo-500">
-                                <i class="fas fa-microphone-lines"></i> Artists
-                            </div>
-                        </label>
-                    </div>
+            </label>
+            <label class="cursor-pointer">
+                <input type="radio" name="search-type" value="album" class="hidden peer">
+                <div class="btn-toolbar-style peer-checked:active">
+                    <i class="fas fa-compact-disc"></i> Albums
                 </div>
-
-                <!-- PLAYLISTS / LIBRARY -->
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-lg text-white">Library</h2>
-                        <button id="create-playlist-btn" class="text-gray-500 hover:text-white" title="New Playlist"><i class="fas fa-plus"></i></button>
-                    </div>
-                    <div id="library-list" class="compact-list-wrapper">
-                        <!-- Playlists injected here -->
-                    </div>
+            </label>
+            <label class="cursor-pointer">
+                <input type="radio" name="search-type" value="artist" class="hidden peer">
+                <div class="btn-toolbar-style peer-checked:active">
+                    <i class="fas fa-microphone-lines"></i> Artists
                 </div>
+            </label>
+        </div>
 
+        <div class="flex items-center gap-3">
+             <button onclick="openCreatePlaylistModal()" class="btn-toolbar-style" title="New Playlist">
+                <i class="fas fa-plus"></i> New Playlist
+            </button>
+             <button id="view-library-btn" class="btn-toolbar-style" title="My Library" onclick="document.getElementById('library-drawer').classList.toggle('translate-x-full')">
+                <i class="fas fa-layer-group"></i> Library
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-24 px-4 sm:px-8 max-w-screen-2xl mx-auto">
+        
+        <!-- Search Hero -->
+        <div class="max-w-3xl mx-auto mb-12">
+            <div id="search-container" class="relative flex items-center bg-[#111] border border-[#333] rounded-2xl p-2 group transition-all">
+                <i class="fas fa-search text-gray-500 ml-4 text-lg"></i>
+                <input type="text" id="search-box" placeholder="Search for songs, artists, or albums..." 
+                       class="w-full bg-transparent border-none outline-none text-white px-4 py-3 text-lg placeholder-gray-600 font-light">
+                <button id="search-btn" class="bg-[#222] hover:bg-[#333] text-white px-6 py-2 rounded-xl transition-colors font-medium">Search</button>
             </div>
-        </aside>
+        </div>
 
-        <!-- MAIN CONTENT -->
-        <section class="feed-panel">
-            <div class="feed-content-inner">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl text-white" id="main-header">Home</h1>
-                </div>
-                
-                <div id="content-area" class="photo-grid">
-                    <!-- Results injected here -->
-                    <div class="col-span-full text-center text-gray-500 mt-20 w-full">
-                        <i class="fas fa-music text-4xl mb-4 opacity-50"></i>
-                        <p>Search for your favorite tracks or select a playlist.</p>
-                    </div>
-                </div>
+        <!-- Dynamic Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h2 id="main-header" class="text-2xl text-white font-medium">Home</h2>
+        </div>
+
+        <!-- Content Grid (Cards) -->
+        <div id="content-area" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            <!-- Initial State -->
+            <div class="col-span-full flex flex-col items-center justify-center text-gray-500 mt-20 opacity-50">
+                <i class="fas fa-wave-square text-6xl mb-4"></i>
+                <p class="text-xl">Discover your sound.</p>
             </div>
-        </section>
+        </div>
 
     </main>
 
-    <!-- PLAYER BAR -->
+    <!-- Library Drawer (Right Side) -->
+    <aside id="library-drawer" class="fixed top-0 right-0 h-full w-80 bg-[#0a0a0a] border-l border-[#252525] z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col pt-20">
+        <div class="px-6 pb-4 border-b border-[#252525] flex justify-between items-center">
+            <h2 class="text-xl text-white font-medium">Your Library</h2>
+            <button onclick="document.getElementById('library-drawer').classList.add('translate-x-full')" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="library-list" class="flex-grow overflow-y-auto p-4 space-y-2">
+            <!-- Populated by script.js -->
+        </div>
+    </aside>
+
+    <!-- Player Bar -->
     <div id="player-bar" class="hidden">
         <div class="player-info">
             <img id="player-img" src="" alt="Cover">
@@ -102,7 +274,11 @@
         
         <div class="custom-player-controls">
             <div class="control-buttons">
-                <button class="player-btn play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
+                <button class="player-btn" id="player-like-btn" title="Like"><i class="far fa-heart"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime -= 10"><i class="fas fa-backward-step text-base"></i></button>
+                <button class="play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime += 10"><i class="fas fa-forward-step text-base"></i></button>
+                <button class="player-btn" title="Lyrics" onclick="openLyrics()"><i class="fas fa-align-center"></i></button>
             </div>
             <div class="progress-container">
                 <span id="current-time">0:00</span>
@@ -115,22 +291,45 @@
              <i class="fas fa-volume-up"></i>
              <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1">
              <a href="#" id="download-btn" class="player-btn text-sm ml-2" target="_blank" title="Download"><i class="fas fa-download"></i></a>
-             <button id="player-like-btn" class="player-btn text-sm ml-2" title="Like"><i class="far fa-heart"></i></button>
         </div>
         
-        <audio id="audio-player" class="hidden"></audio>
+        <audio id="audio-player" class="hidden" crossorigin="anonymous"></audio>
     </div>
 
-    <!-- LYRICS OVERLAY -->
-    <div id="lyrics-overlay">
-        <button class="close-lyrics" id="close-lyrics"><i class="fas fa-times"></i></button>
-        <div class="lyrics-content">
-            <h2 class="lyrics-title" id="lyrics-title">Title</h2>
-            <h3 class="lyrics-artist" id="lyrics-artist">Artist</h3>
-            <div class="lyrics-text" id="lyrics-text">Loading lyrics...</div>
+    <!-- Create Playlist Modal -->
+    <div id="create-playlist-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-white mb-2">Create Playlist</h3>
+            <p class="text-gray-400 text-sm">Give your new playlist a name.</p>
+            <input type="text" id="new-playlist-name" class="modal-input" placeholder="My Awesome Playlist">
+            <button onclick="confirmCreatePlaylist()" class="modal-btn btn-primary">Create</button>
+            <button onclick="closeModals()" class="modal-btn btn-secondary">Cancel</button>
         </div>
     </div>
 
+    <!-- Add to Playlist Modal -->
+    <div id="add-to-playlist-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-white mb-4">Add to Playlist</h3>
+            <div id="modal-playlist-list" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Populated dynamically -->
+            </div>
+            <button onclick="closeModals()" class="modal-btn btn-secondary mt-4">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Lyrics Overlay -->
+    <div id="lyrics-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col items-center justify-center p-8">
+        <button class="close-lyrics absolute top-8 right-8 text-white text-3xl hover:text-gray-300" id="close-lyrics"><i class="fas fa-times"></i></button>
+        <div class="text-center max-w-2xl h-full overflow-y-auto no-scrollbar">
+            <h2 class="text-3xl text-white font-bold mb-2" id="lyrics-title">Title</h2>
+            <h3 class="text-xl text-indigo-400 mb-8" id="lyrics-artist">Artist</h3>
+            <div class="text-2xl text-gray-300 font-light leading-relaxed whitespace-pre-wrap" id="lyrics-text">Loading lyrics...</div>
+        </div>
+    </div>
+
+    <!-- DB and Script -->
+    <script src="db.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
