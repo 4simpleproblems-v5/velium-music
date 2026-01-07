@@ -108,6 +108,9 @@ function updateVolumeIcon() {
     }
 }
 
+// --- Actions (Removed duplicates) ---
+// Functions moved to top level for scope visibility
+
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', initApp);
 
