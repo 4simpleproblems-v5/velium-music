@@ -76,7 +76,7 @@
         }
         .btn-toolbar-style.active {
             background-color: rgba(79, 70, 229, 0.1);
-            border-color: #4f46e5;
+            border: 1px solid #4f46e5;
             color: #4f46e5;
         }
 
@@ -90,12 +90,12 @@
             border-color: #4f46e5;
         }
 
-        /* --- Player Bar (Fixed Dark Style) --- */
+        /* --- Player Bar (Solid Black) --- */
         #player-bar {
             position: fixed;
             bottom: 0; left: 0; right: 0;
             height: 90px;
-            background-color: rgba(0,0,0,0.95);
+            background-color: #000000;
             border-top: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(20px);
             z-index: 100;
@@ -103,7 +103,6 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 2rem;
-            transition: background-color 0.5s ease;
         }
 
         .player-info { display: flex; align-items: center; gap: 1rem; width: 300px; }
@@ -114,7 +113,7 @@
             object-fit: cover;
         }
         .player-text { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
-        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .player-artist { color: rgba(255,255,255,0.7); font-size: 0.75rem; }
 
         .custom-player-controls {
@@ -131,8 +130,10 @@
             flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;
             -webkit-appearance: none; outline: none; cursor: pointer;
         }
+        /* Thumb always visible */
         .progress-bar::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 10px; height: 10px; background: white; border-radius: 50%; opacity: 1; transition: transform 0.2s;
+            -webkit-appearance: none; width: 12px; height: 12px; background: white; border-radius: 50%; opacity: 1; transition: transform 0.2s;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         .progress-container:hover .progress-bar::-webkit-slider-thumb { transform: scale(1.2); }
 
@@ -261,7 +262,7 @@
         <div class="max-w-3xl mx-auto mb-12">
             <div id="search-container" class="relative flex items-center bg-[#111] border border-[#333] rounded-2xl p-2 group transition-all">
                 <i class="fas fa-search text-gray-500 ml-4 text-lg"></i>
-                <input type="text" id="search-box" placeholder="Search for songs, artists, or albums..." 
+                <input type="text" id="search-box" placeholder="Search for songs, artists..." 
                        class="w-full bg-transparent border-none outline-none text-white px-4 py-3 text-lg placeholder-gray-600 font-light">
                 <button onclick="handleSearch()" class="btn-toolbar-style active px-8">Search</button>
             </div>
@@ -406,111 +407,8 @@
         </div>
     </div>
 
-    <!-- Lyrics Overlay -->
-    <div id="lyrics-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col items-center justify-center p-8">
-        <button class="close-lyrics absolute top-8 right-8 text-white text-3xl hover:text-gray-300" id="close-lyrics"><i class="fas fa-times"></i></button>
-        <div class="text-center max-w-2xl h-full overflow-y-auto no-scrollbar">
-            <h2 class="text-3xl text-white font-bold mb-2" id="lyrics-title">Title</h2>
-            <h3 class="text-xl text-indigo-400 mb-8" id="lyrics-artist">Artist</h3>
-            <div class="text-2xl text-gray-300 font-light leading-relaxed whitespace-pre-wrap" id="lyrics-text">Loading lyrics...</div>
-        </div>
-    </div>
-
     <!-- DB and Script -->
     <script src="db.js"></script>
     <script src="script.js"></script>
-
-    <!-- Dynamic Color Script -->
-    <script>
-        (function() {
-            const playerImg = document.getElementById('player-img');
-            const playerBar = document.getElementById('player-bar');
-            
-            playerImg.crossOrigin = "Anonymous";
-
-            playerImg.addEventListener('load', function() {
-                if (!playerImg.src || playerImg.src.includes('data:image')) {
-                     playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
-                     playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
-                     return;
-                }
-
-                try {
-                    const color = getDominantColor(playerImg);
-                    playerBar.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.95)`;
-                    playerBar.style.borderTopColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.5)`;
-                } catch (e) {
-                    playerBar.style.backgroundColor = 'rgba(0,0,0,0.95)';
-                    playerBar.style.borderTopColor = 'rgba(255,255,255,0.1)';
-                }
-            });
-
-            function getDominantColor(imgEl) {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 100;
-                canvas.height = 100;
-                
-                try {
-                    ctx.drawImage(imgEl, 0, 0, 100, 100);
-                    const imageData = ctx.getImageData(0, 0, 100, 100).data;
-                    const colorCounts = {};
-                    let maxScore = -1;
-                    let bestColor = {r: 20, g: 20, b: 20}; 
-
-                    for (let i = 0; i < imageData.length; i += 4) {
-                        const r = imageData[i], g = imageData[i + 1], b = imageData[i + 2], a = imageData[i + 3];
-                        if (a < 128) continue; 
-                        const {h, s, l} = rgbToHsl(r, g, b);
-
-                        if (s < 0.15) continue; 
-                        if (l < 0.1 || l > 0.9) continue;
-                        if (h > 60 && h < 100 && s < 0.6 && l < 0.5) continue; 
-                        if (h >= 0 && h < 25 && l > 0.75) continue; 
-
-                        const bucketR = Math.round(r / 10) * 10;
-                        const bucketG = Math.round(g / 10) * 10;
-                        const bucketB = Math.round(b / 10) * 10;
-                        const key = `${bucketR},${bucketG},${bucketB}`;
-
-                        if (!colorCounts[key]) {
-                            colorCounts[key] = { count: 0, s: s, r: bucketR, g: bucketG, b: bucketB };
-                        }
-                        colorCounts[key].count++;
-                    }
-
-                    for (const key in colorCounts) {
-                        const c = colorCounts[key];
-                        const score = c.count * Math.pow(c.s, 2); 
-                        if (score > maxScore) {
-                            maxScore = score;
-                            bestColor = {r: c.r, g: c.g, b: c.b};
-                        }
-                    }
-                    return bestColor;
-                } catch (e) {
-                    return {r: 20, g: 20, b: 20};
-                }
-            }
-
-            function rgbToHsl(r, g, b) {
-                r /= 255; g /= 255; b /= 255;
-                const max = Math.max(r, g, b), min = Math.min(r, g, b);
-                let h, s, l = (max + min) / 2;
-                if (max === min) h = s = 0;
-                else {
-                    const d = max - min;
-                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                    switch (max) {
-                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                        case g: h = (b - r) / d + 2; break;
-                        case b: h = (r - g) / d + 4; break;
-                    }
-                    h *= 60;
-                }
-                return { h, s, l };
-            }
-        })();
-    </script>
 </body>
 </html>

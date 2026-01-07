@@ -90,7 +90,7 @@ async function initApp() {
             audioPlayer.addEventListener('timeupdate', updateProgress);
             audioPlayer.addEventListener('loadedmetadata', () => {
                 if (totalDurationElem) totalDurationElem.textContent = formatTime(audioPlayer.duration);
-                if (seekSlider) seekSlider.max = audioPlayer.duration; // Use float max
+                if (seekSlider) seekSlider.max = audioPlayer.duration; 
             });
             audioPlayer.addEventListener('ended', () => {
                 isPlaying = false;
@@ -181,7 +181,7 @@ window.confirmCreatePlaylist = async function() {
             id: 'pl-' + Date.now(),
             name: name,
             songs: [],
-            cover: null, // Custom cover
+            cover: null, 
             updatedAt: new Date().toISOString()
         };
         library.playlists.push(newPlaylist);
@@ -221,7 +221,7 @@ window.savePlaylistChanges = async function() {
         library.playlists[plIndex].updatedAt = new Date().toISOString();
         await saveLibrary();
         renderLibrary();
-        openPlaylist(currentPlaylistId); // Refresh view
+        openPlaylist(currentPlaylistId); 
         closeModals();
         showToast("Playlist updated");
     }
@@ -277,7 +277,6 @@ function initCropper() {
     };
     
     modal.classList.add('active');
-    // Hide edit modal temporarily? Or overlay it. Z-index handles it.
     requestAnimationFrame(drawCropper);
 }
 
@@ -295,14 +294,12 @@ const drawCropper = () => {
     
     ctx.drawImage(cropperImage, 0, 0, w, h);
     
-    // Overlay
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.beginPath();
     ctx.rect(0, 0, w, h);
     ctx.arc(cropState.x, cropState.y, cropState.radius, 0, 2 * Math.PI, true);
     ctx.fill();
     
-    // Border
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 4]);
@@ -356,8 +353,6 @@ const handleCropScroll = (e) => {
     newRadius = Math.max(20, Math.min(newRadius, maxPossibleRadius));
     
     cropState.radius = newRadius;
-    
-    // Clamp center so circle stays in bounds
     const r = newRadius;
     cropState.x = Math.max(r, Math.min(cropState.x, w - r));
     cropState.y = Math.max(r, Math.min(cropState.y, h - r));
@@ -367,7 +362,7 @@ const handleCropScroll = (e) => {
 
 window.submitCrop = async function() {
     const tempCanvas = document.createElement('canvas');
-    const size = 300; // Standardize cover size
+    const size = 300; 
     tempCanvas.width = size;
     tempCanvas.height = size;
     const tCtx = tempCanvas.getContext('2d');
@@ -380,7 +375,6 @@ window.submitCrop = async function() {
     tCtx.drawImage(cropperImage, sourceX, sourceY, sourceSize, sourceSize, 0, 0, size, size);
     const base64 = tempCanvas.toDataURL('image/jpeg', 0.8);
     
-    // Save to current playlist
     if (currentPlaylistId) {
         const plIndex = library.playlists.findIndex(p => p.id === currentPlaylistId);
         if (plIndex !== -1) {
@@ -393,7 +387,6 @@ window.submitCrop = async function() {
     }
     
     closeCropper();
-    // Keep edit modal open to confirm other changes
 };
 
 // --- Navigation ---
@@ -560,7 +553,6 @@ window.openLyrics = async function() {
     let artistName = currentTrack.primaryArtists || currentTrack.author?.name || '';
     let trackName = currentTrack.name || currentTrack.song?.name || '';
 
-    // Cleanup for API
     const decodeHtml = (html) => { const txt = document.createElement("textarea"); txt.innerHTML = html; return txt.value; };
     artistName = decodeHtml(artistName);
     if (artistName.includes(',')) artistName = artistName.split(',')[0].trim();
@@ -600,13 +592,10 @@ window.removeFromPlaylist = async function(playlistId, songId, songUrl) {
     const pl = library.playlists[plIndex];
     const initialLength = pl.songs.length;
     
-    // Remove by ID or URL
     pl.songs = pl.songs.filter(s => {
         const sId = s.id;
         const sUrl = s.song?.url || s.url;
-        // If IDs match, remove
         if (songId && sId === songId) return false;
-        // If URLs match (and are valid), remove
         if (songUrl && sUrl === songUrl) return false;
         return true;
     });
@@ -615,7 +604,7 @@ window.removeFromPlaylist = async function(playlistId, songId, songUrl) {
         pl.updatedAt = new Date().toISOString();
         await saveLibrary();
         renderLibrary();
-        openPlaylist(playlistId); // Refresh view
+        openPlaylist(playlistId); 
         showToast("Removed from playlist");
     }
 };
@@ -637,7 +626,6 @@ async function toggleLike(item) {
         library.likedSongs.splice(index, 1);
         showToast("Removed from Liked Songs");
     } else {
-        // Fix for persistence: Ensure we save enough data to play it back later
         let cleanItem = { ...item }; 
         if (!cleanItem.downloadUrl && !cleanItem.url && cleanItem.song?.url) {
             cleanItem.url = cleanItem.song.url;
@@ -687,7 +675,6 @@ async function confirmAddToPlaylist(playlist) {
         await saveLibrary();
         showToast(`Added to ${playlist.name}`);
         renderLibrary();
-        // If we are currently viewing this playlist, refresh it
         if (currentPlaylistId === playlist.id) {
             openPlaylist(playlist.id);
         }
@@ -740,7 +727,7 @@ function renderLibrary() {
         const div = document.createElement('div');
         div.className = 'compact-list-item flex items-center gap-2 p-2';
         
-        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQACAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
         if (pl.cover) {
             plCover = pl.cover;
         } else if (pl.songs.length > 0) {
@@ -771,20 +758,30 @@ function attachListEvents(items, contextPlaylistId = null) {
         if (!uniqueId) uniqueId = 'unknown-' + Math.random();
         const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
 
+        const row = document.getElementById(`row-${domId}`);
         const btn = document.getElementById(`play-${domId}`);
         const likeBtn = document.getElementById(`like-${domId}`);
         
-        if (btn) btn.addEventListener('click', () => playSong(item));
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
+        if (row) row.addEventListener('click', () => playSong(item));
+        if (btn) btn.addEventListener('click', (e) => { e.stopPropagation(); playSong(item); });
+        if (likeBtn) likeBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLike(item); });
 
         if (contextPlaylistId) {
             const removeBtn = document.getElementById(`remove-${domId}`);
             if (removeBtn) {
-                removeBtn.addEventListener('click', () => removeFromPlaylist(contextPlaylistId, item.id, trackUrl));
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeFromPlaylist(contextPlaylistId, item.id, trackUrl);
+                });
             }
         } else {
             const addBtn = document.getElementById(`add-${domId}`);
-            if (addBtn) addBtn.addEventListener('click', () => addToPlaylist(item));
+            if (addBtn) {
+                addBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    addToPlaylist(item);
+                });
+            }
         }
     });
 }
@@ -880,7 +877,6 @@ function createSongRow(item, contextPlaylistId = null) {
     if (!uniqueId) uniqueId = 'unknown-' + Math.random();
     const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
 
-    // Determine Action Button (Add or Remove)
     let actionBtnHtml = '';
     if (contextPlaylistId) {
         actionBtnHtml = `
@@ -897,7 +893,7 @@ function createSongRow(item, contextPlaylistId = null) {
     }
 
     return `
-        <div class="song-row flex items-center p-3 bg-[#111] hover:bg-[#1a1a1a] rounded-xl border border-[#252525] transition-colors gap-4">
+        <div id="row-${domId}" class="song-row flex items-center p-3 bg-[#111] hover:bg-[#1a1a1a] rounded-xl border border-[#252525] transition-colors gap-4 cursor-pointer">
             <img src="${imgUrl}" loading="lazy" class="w-12 h-12 rounded-lg object-cover">
             <div class="flex-grow overflow-hidden">
                 <div class="text-white font-medium truncate">${song.name}</div>
