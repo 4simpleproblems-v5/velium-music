@@ -753,16 +753,17 @@ function renderResults(results) {
             card.innerHTML = `
                 <div class="relative w-full aspect-square">
                     <img src="${imgUrl}" alt="${name}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80"></div>
                     
-                    <div class="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 class="text-white font-bold truncate text-lg drop-shadow-md">${name}</h3>
-                        <p class="text-gray-400 text-sm truncate">${subText}</p>
-                    </div>
-
                     <button class="play-overlay-btn absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/30 backdrop-blur-sm">
                         <i class="fas fa-play text-4xl text-white drop-shadow-xl hover:scale-110 transition-transform"></i>
                     </button>
+
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 pointer-events-none"></div>
+                    
+                    <div class="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
+                        <h3 class="text-white font-bold truncate text-lg drop-shadow-md">${name}</h3>
+                        <p class="text-gray-400 text-sm truncate">${subText}</p>
+                    </div>
                     
                     <button class="absolute top-2 right-2 w-10 h-10 flex items-center justify-center rounded-full bg-black/50 hover:bg-black/80 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 fav-btn" title="Like">
                         <i class="far fa-heart"></i>
