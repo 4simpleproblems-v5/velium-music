@@ -398,6 +398,7 @@ window.submitCrop = async function() {
 
 // --- Navigation ---
 window.showHome = function() {
+    closeLibraryDrawer();
     currentPlaylistId = null;
     mainHeader.textContent = "Home";
     contentArea.className = GRID_CLASS;
@@ -410,6 +411,7 @@ window.showHome = function() {
 };
 
 window.handleSearch = async function() {
+    closeLibraryDrawer();
     currentPlaylistId = null;
     const query = searchBox ? searchBox.value.trim() : '';
     if (!query) return;
@@ -469,6 +471,7 @@ window.handleSearch = async function() {
 };
 
 window.openLikedSongs = function() {
+    closeLibraryDrawer();
     currentPlaylistId = null;
     mainHeader.textContent = "Liked Songs";
     contentArea.className = ''; 
@@ -497,6 +500,7 @@ window.openLikedSongs = function() {
 };
 
 window.openPlaylist = function(playlistId) {
+    closeLibraryDrawer();
     currentPlaylistId = playlistId;
     const pl = library.playlists.find(p => p.id === playlistId);
     if (!pl) return;
@@ -666,6 +670,11 @@ function updatePlayerLikeIcon() {
     playerLikeBtn.innerHTML = isLiked ? '<i class="fas fa-heart text-red-500"></i>' : '<i class="far fa-heart"></i>';
 }
 
+function closeLibraryDrawer() {
+    const drawer = document.getElementById('library-drawer');
+    if (drawer) drawer.classList.add('translate-x-full');
+}
+
 function renderLibrary() {
     if (!libraryList) return;
     libraryList.innerHTML = '';
@@ -687,7 +696,10 @@ function renderLibrary() {
             <div class="text-xs text-gray-500">${library.likedSongs.length} songs</div>
         </div>
     `;
-    likedDiv.onclick = openLikedSongs;
+    likedDiv.onclick = () => {
+        openLikedSongs();
+        closeLibraryDrawer();
+    };
     libraryList.appendChild(likedDiv);
 
     // Playlists
@@ -709,7 +721,10 @@ function renderLibrary() {
                 <div class="text-xs text-gray-500">${pl.songs.length} songs</div>
             </div>
         `;
-        div.onclick = () => openPlaylist(pl.id);
+        div.onclick = () => {
+            openPlaylist(pl.id);
+            closeLibraryDrawer();
+        };
         libraryList.appendChild(div);
     });
 }
