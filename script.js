@@ -410,6 +410,11 @@ window.showHome = function() {
     `;
 };
 
+function closeLibraryDrawer() {
+    const drawer = document.getElementById('library-drawer');
+    if (drawer) drawer.classList.add('translate-x-full');
+}
+
 window.handleSearch = async function() {
     closeLibraryDrawer();
     currentPlaylistId = null;
@@ -534,7 +539,7 @@ window.openPlaylist = function(playlistId) {
             </div>
         </div>
         <div class="song-list">
-            ${pl.songs.map(item => createSongRow(item)).join('')}
+            ${pl.songs.map(item => createSongRow(item, playlistId)).join('')}
         </div>
     `;
 
@@ -543,7 +548,7 @@ window.openPlaylist = function(playlistId) {
     }
 
     contentArea.innerHTML = html;
-    attachListEvents(pl.songs);
+    attachListEvents(pl.songs, playlistId);
 };
 
 window.openLyrics = async function() {
@@ -583,6 +588,38 @@ window.openLyrics = async function() {
     }
 };
 
+window.addCurrentToPlaylist = function() {
+    if (currentTrack) addToPlaylist(currentTrack);
+};
+
+window.removeFromPlaylist = async function(playlistId, songId, songUrl) {
+    if (!playlistId) return;
+    const plIndex = library.playlists.findIndex(p => p.id === playlistId);
+    if (plIndex === -1) return;
+
+    const pl = library.playlists[plIndex];
+    const initialLength = pl.songs.length;
+    
+    // Remove by ID or URL
+    pl.songs = pl.songs.filter(s => {
+        const sId = s.id;
+        const sUrl = s.song?.url || s.url;
+        // If IDs match, remove
+        if (songId && sId === songId) return false;
+        // If URLs match (and are valid), remove
+        if (songUrl && sUrl === songUrl) return false;
+        return true;
+    });
+
+    if (pl.songs.length < initialLength) {
+        pl.updatedAt = new Date().toISOString();
+        await saveLibrary();
+        renderLibrary();
+        openPlaylist(playlistId); // Refresh view
+        showToast("Removed from playlist");
+    }
+};
+
 // --- Actions ---
 async function toggleLike(item) {
     const trackUrl = item.song?.url || item.url;
@@ -600,6 +637,7 @@ async function toggleLike(item) {
         library.likedSongs.splice(index, 1);
         showToast("Removed from Liked Songs");
     } else {
+        // Fix for persistence: Ensure we save enough data to play it back later
         let cleanItem = { ...item }; 
         if (!cleanItem.downloadUrl && !cleanItem.url && cleanItem.song?.url) {
             cleanItem.url = cleanItem.song.url;
@@ -670,11 +708,6 @@ function updatePlayerLikeIcon() {
     playerLikeBtn.innerHTML = isLiked ? '<i class="fas fa-heart text-red-500"></i>' : '<i class="far fa-heart"></i>';
 }
 
-function closeLibraryDrawer() {
-    const drawer = document.getElementById('library-drawer');
-    if (drawer) drawer.classList.add('translate-x-full');
-}
-
 function renderLibrary() {
     if (!libraryList) return;
     libraryList.innerHTML = '';
@@ -729,7 +762,7 @@ function renderLibrary() {
     });
 }
 
-function attachListEvents(items) {
+function attachListEvents(items, contextPlaylistId = null) {
     items.forEach(item => {
         const song = item.song || item;
         const author = item.author || { name: item.primaryArtists || '' };
@@ -740,11 +773,19 @@ function attachListEvents(items) {
 
         const btn = document.getElementById(`play-${domId}`);
         const likeBtn = document.getElementById(`like-${domId}`);
-        const addBtn = document.getElementById(`add-${domId}`);
         
         if (btn) btn.addEventListener('click', () => playSong(item));
         if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(item));
-        if (addBtn) addBtn.addEventListener('click', () => addToPlaylist(item));
+
+        if (contextPlaylistId) {
+            const removeBtn = document.getElementById(`remove-${domId}`);
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => removeFromPlaylist(contextPlaylistId, item.id, trackUrl));
+            }
+        } else {
+            const addBtn = document.getElementById(`add-${domId}`);
+            if (addBtn) addBtn.addEventListener('click', () => addToPlaylist(item));
+        }
     });
 }
 
@@ -819,7 +860,7 @@ function renderResults(results) {
     });
 }
 
-function createSongRow(item) {
+function createSongRow(item, contextPlaylistId = null) {
     const imgUrl = getImageUrl(item);
     const song = item.song || item;
     const author = item.author || { name: item.primaryArtists || '' };
@@ -839,6 +880,22 @@ function createSongRow(item) {
     if (!uniqueId) uniqueId = 'unknown-' + Math.random();
     const domId = btoa(String(uniqueId)).substring(0, 16).replace(/[/+=]/g, '');
 
+    // Determine Action Button (Add or Remove)
+    let actionBtnHtml = '';
+    if (contextPlaylistId) {
+        actionBtnHtml = `
+            <button id="remove-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-500 transition-all" title="Remove from Playlist">
+                <i class="fas fa-minus"></i>
+            </button>
+        `;
+    } else {
+        actionBtnHtml = `
+            <button id="add-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all" title="Add to Playlist">
+                <i class="fas fa-plus"></i>
+            </button>
+        `;
+    }
+
     return `
         <div class="song-row flex items-center p-3 bg-[#111] hover:bg-[#1a1a1a] rounded-xl border border-[#252525] transition-colors gap-4">
             <img src="${imgUrl}" loading="lazy" class="w-12 h-12 rounded-lg object-cover">
@@ -848,9 +905,7 @@ function createSongRow(item) {
             </div>
             <div class="flex items-center gap-3">
                  <div class="text-gray-600 text-xs">${durationStr}</div>
-                 <button id="add-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center text-gray-400 hover:text-white hover:border-white transition-all" title="Add to Playlist">
-                    <i class="fas fa-plus"></i>
-                 </button>
+                 ${actionBtnHtml}
                  <button id="like-${domId}" class="w-8 h-8 rounded-full border border-[#333] flex items-center justify-center ${isLiked ? 'text-red-500 border-red-500' : 'text-gray-400 hover:text-white hover:border-white'} transition-all" title="${isLiked ? 'Unlike' : 'Like'}">
                     <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i>
                  </button>
