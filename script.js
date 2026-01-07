@@ -382,7 +382,7 @@ function getDownloadUrl(item) {
     let url = '';
     if (item.downloadUrl) { if (Array.isArray(item.downloadUrl)) { const b = item.downloadUrl.find(d => d.quality === '320kbps') || item.downloadUrl[item.downloadUrl.length - 1]; url = b.link; } else url = item.downloadUrl; }
     else { const p = item.song?.url || item.url; if (p) { if (typeof p === 'string' && (p.includes('saavncdn.com') || p.match(/\.(mp3|mp4|m4a)$/i))) url = p; else if (Array.isArray(p)) { const b = p.find(d => d.quality === '320kbps') || p[p.length - 1]; url = b.link; } else url = `${API_BASE}/api/download?track_url=${encodeURIComponent(p)}`; } }
-    return url ? 'https://corsproxy.io/?' + encodeURIComponent(url) : '';
+    return url;
 }
 
 function playSong(item, index = -1, queue = []) {
@@ -447,7 +447,38 @@ function playNextSong() { if (queueIndex > -1 && queueIndex < playQueue.length -
 function getImageUrl(item) { if (item.song && item.song.img) { let i = item.song.img.big || item.song.img.small; return i.startsWith('/api/') ? API_BASE + i : i; } if (item.image) { if (Array.isArray(item.image)) return item.image[item.image.length - 1].link; else if (typeof item.image === 'string') return item.image; } return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='; }
 function formatTime(v) { if (typeof v === 'object' && v !== null) { const s = v.hours * 3600 + v.minutes * 60 + v.seconds; return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`; } const m = Math.floor(v / 60) || 0, s = Math.floor(v % 60) || 0; return `${m}:${s < 10 ? '0' : ''}${s}`; }
 function formatNumber(n) { if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'; return n; }
-async function downloadResource(url, filename) { try { const r = await fetch(url); if (!r.ok) throw new Error(); const b = await r.blob(), l = document.createElement("a"); l.href = URL.createObjectURL(b); l.download = filename; document.body.appendChild(l); l.click(); document.body.removeChild(l); URL.revokeObjectURL(l.href); showToast("Download started!"); } catch (e) { window.open(url, '_blank'); } }
+async function downloadResource(url, filename) {
+    try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("Direct fetch failed");
+        const b = await r.blob();
+        triggerDownload(b, filename);
+        showToast("Download started!");
+    } catch (e) {
+        console.warn("Direct download failed, trying proxy...");
+        try {
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+            const r = await fetch(proxyUrl);
+            if (!r.ok) throw new Error("Proxy fetch failed");
+            const b = await r.blob();
+            triggerDownload(b, filename);
+            showToast("Download started (via Proxy)!");
+        } catch (e2) {
+            console.error("Proxy download failed:", e2);
+            showToast("Download failed. Opening in new tab.");
+            window.open(url, '_blank');
+        }
+    }
+}
+
+function triggerDownload(blob, filename) {
+    const l = document.createElement("a");
+    l.href = URL.createObjectURL(blob);
+    l.download = filename;
+    document.body.appendChild(l);
+    document.body.removeChild(l);
+    URL.revokeObjectURL(l.href);
+}
 
 // --- Settings UI ---
 window.toggleSettingsMenu = function() { if (settingsDropdown) settingsDropdown.classList.toggle('hidden'); };
