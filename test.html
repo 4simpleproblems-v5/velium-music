@@ -49,7 +49,7 @@
         .btn-toolbar-style {
             background: #0a0a0a;
             border: 1px solid #333;
-            border-radius: 14px;
+            border-radius: 16px;
             color: #d1d5db;
             padding: 0.75rem 1.25rem;
             font-weight: 500;
@@ -76,7 +76,7 @@
         }
         .btn-toolbar-style.active {
             background-color: rgba(79, 70, 229, 0.1);
-            border: 1px solid #4f46e5;
+            border-color: #4f46e5;
             color: #4f46e5;
         }
 
@@ -90,7 +90,7 @@
             border-color: #4f46e5;
         }
 
-        /* --- Player Bar (Solid Black) --- */
+        /* --- Player Bar (Fixed Dark Style) --- */
         #player-bar {
             position: fixed;
             bottom: 0; left: 0; right: 0;
@@ -103,6 +103,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 2rem;
+            transition: background-color 0.5s ease;
         }
 
         .player-info { display: flex; align-items: center; gap: 1rem; width: 300px; }
@@ -113,7 +114,7 @@
             object-fit: cover;
         }
         .player-text { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
-        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .player-title { color: white; font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
         .player-artist { color: rgba(255,255,255,0.7); font-size: 0.75rem; }
 
         .custom-player-controls {
@@ -152,7 +153,7 @@
         
         .modal-content {
             background: #000; border: 1px solid #333;
-            border-radius: 1rem; 
+            border-radius: 18px; 
             width: 90%; max-width: 450px;
             transform: scale(0.95); transition: transform 0.2s;
             overflow: hidden;
@@ -168,13 +169,13 @@
 
         .modal-input {
             width: 100%; background: #111; border: 1px solid #252525;
-            color: white; padding: 0.75rem; border-radius: 0.5rem;
+            color: white; padding: 0.75rem; border-radius: 16px;
             outline: none; transition: all 0.2s;
         }
         .modal-input:focus { border-color: #4f46e5; transform: scale(1.01); }
 
         .modal-btn {
-            width: 100%; padding: 0.75rem 1.25rem; border-radius: 14px;
+            width: 100%; padding: 0.75rem 1.25rem; border-radius: 16px;
             font-weight: 500; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             text-align: center; font-size: 0.9rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
@@ -192,7 +193,7 @@
         .btn-danger:hover { background: rgba(220, 38, 38, 0.15); border-color: #ef4444; color: #ef4444; }
 
         .close-btn-round {
-            width: 2.5rem; height: 2.5rem; border-radius: 14px;
+            width: 2.5rem; height: 2.5rem; border-radius: 16px;
             background: #0a0a0a; border: 1px solid #333; color: #d1d5db;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: all 0.2s;
@@ -208,7 +209,7 @@
 
         /* --- Library Drawer List Items --- */
         .compact-list-item {
-            border-radius: 0.5rem; 
+            border-radius: 16px; 
             margin-bottom: 2px;
             padding: 0.5rem; 
             transition: background-color 0.2s;
@@ -310,9 +311,9 @@
         <div class="custom-player-controls">
             <div class="control-buttons">
                 <button class="player-btn" id="player-like-btn" title="Like"><i class="far fa-heart"></i></button>
-                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime -= 10"><i class="fas fa-backward-step text-base"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime -= 10"><i class="fas fa-backward text-base"></i></button>
                 <button class="play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
-                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime += 10"><i class="fas fa-forward-step text-base"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime += 10"><i class="fas fa-forward text-base"></i></button>
                 <button class="player-btn" title="Add to Playlist" onclick="addCurrentToPlaylist()"><i class="fas fa-plus"></i></button>
             </div>
             <div class="progress-container">
