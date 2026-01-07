@@ -54,7 +54,25 @@ function getInactivePlayer() {
     return document.getElementById(activePlayerId === 'audio-player' ? 'audio-player-2' : 'audio-player');
 }
 
-function toggleMute() {
+function updatePlayerLikeIcon() {
+    if (!currentTrack) return;
+    // playerLikeBtn might not be assigned if initApp hasn't run fully, but this fn is called by playSong
+    // So we fetch it fresh if needed or rely on initApp
+    const btn = playerLikeBtn || document.getElementById('player-like-btn');
+    if (!btn) return;
+
+    const trackUrl = currentTrack.song?.url || currentTrack.url;
+    const isLiked = library.likedSongs.some(s => {
+        const sUrl = s.song?.url || s.url;
+        const sId = s.id;
+        if (currentTrack.id && sId === currentTrack.id) return true;
+        if (trackUrl && sUrl === trackUrl) return true;
+        return false;
+    });
+    btn.innerHTML = isLiked ? '<i class="fas fa-heart text-red-500"></i>' : '<i class="far fa-heart"></i>';
+}
+
+window.toggleMute = function() {
     const player = getActivePlayer();
     if (!player) return;
     
@@ -487,6 +505,42 @@ function startCrossfade() {
             console.log("Crossfade Complete");
         }
     }, stepTime);
+}
+
+async function openLyrics() {
+    if (!currentTrack) return;
+
+    lyricsOverlay.classList.add('active');
+    lyricsTitle.textContent = currentTrack.name || currentTrack.song?.name || '';
+    
+    let artistName = currentTrack.primaryArtists || currentTrack.author?.name || '';
+    let trackName = currentTrack.name || currentTrack.song?.name || '';
+
+    const decodeHtml = (html) => { const txt = document.createElement("textarea"); txt.innerHTML = html; return txt.value; };
+    artistName = decodeHtml(artistName);
+    if (artistName.includes(',')) artistName = artistName.split(',')[0].trim();
+    trackName = decodeHtml(trackName);
+    trackName = trackName.replace(/\s*\(.*? (feat|ft|from|cover|remix).*?\)/gi, '');
+    trackName = trackName.replace(/\s*\[.*?\]/gi, ''); 
+    trackName = trackName.trim();
+
+    lyricsArtist.textContent = artistName;
+    lyricsText.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
+
+    const url = `${LYRICS_API_BASE}?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}`;
+
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.data && json.data.lyrics) {
+            lyricsText.textContent = json.data.lyrics;
+        } else {
+            lyricsText.textContent = "Lyrics not found.";
+        }
+    } catch (e) {
+        console.error(e);
+        lyricsText.textContent = "Failed to load lyrics.";
+    }
 }
 
 // --- List UI ---
