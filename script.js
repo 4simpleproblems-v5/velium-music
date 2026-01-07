@@ -55,11 +55,9 @@ function updateVolumeIcon() {
     icon.className = 'fas cursor-pointer w-5 text-center';
     if (audioPlayer.volume === 0) {
         icon.classList.add('fa-volume-xmark');
-    }
-    else if (audioPlayer.volume < 0.5) {
+    } else if (audioPlayer.volume < 0.5) {
         icon.classList.add('fa-volume-low');
-    }
-    else {
+    } else {
         icon.classList.add('fa-volume-high');
     }
 }
@@ -142,7 +140,7 @@ async function initApp() {
             audioPlayer.addEventListener('timeupdate', updateProgress);
             audioPlayer.addEventListener('loadedmetadata', () => {
                 if (totalDurationElem) totalDurationElem.textContent = formatTime(audioPlayer.duration);
-                if (seekSlider) seekSlider.max = audioPlayer.duration; 
+                if (seekSlider) seekSlider.max = audioPlayer.duration; // Use float max
             });
             audioPlayer.addEventListener('ended', () => {
                 isPlaying = false;
@@ -539,11 +537,10 @@ window.openLikedSongs = function() {
                 <i class="fas fa-heart"></i>
             </div>
             <div class="artist-info">
-                <h2>Liked Songs</h2>
-                <p>${library.likedSongs.length} songs</p>
+                <p>${library.likedSongs.length} song${library.likedSongs.length !== 1 ? 's' : ''}</p>
             </div>
         </div>
-        <div class="song-list">
+        <div class="song-list mt-8">
             ${library.likedSongs.map(item => createSongRow(item)).join('')}
         </div>
     `;
@@ -567,7 +564,6 @@ window.openPlaylist = function(playlistId) {
 
     const lastUpdated = new Date(pl.updatedAt).toLocaleDateString();
     
-    // Determine cover
     let coverHtml = '';
     if (pl.cover) {
         coverHtml = `<img src="${pl.cover}" class="w-32 h-32 rounded-lg object-cover shadow-lg border border-[#333]">`;
@@ -583,14 +579,13 @@ window.openPlaylist = function(playlistId) {
         <div class="artist-header relative group">
             ${coverHtml}
             <div class="artist-info">
-                <h2>${pl.name}</h2>
-                <p>${pl.songs.length} songs • Updated: ${lastUpdated}</p>
+                <p>${pl.songs.length} song${pl.songs.length !== 1 ? 's' : ''} • Updated: ${lastUpdated}</p>
                 <button onclick="openEditPlaylistModal()" class="btn-toolbar-style mt-4">
                     <i class="fas fa-pen"></i> Edit Playlist
                 </button>
             </div>
         </div>
-        <div class="song-list">
+        <div class="song-list mt-8">
             ${pl.songs.map(item => createSongRow(item, playlistId)).join('')}
         </div>
     `;
@@ -786,7 +781,7 @@ function renderLibrary() {
         const div = document.createElement('div');
         div.className = 'compact-list-item flex items-center gap-2 p-2';
         
-        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQACAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        let plCover = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
         if (pl.cover) {
             plCover = pl.cover;
         } else if (pl.songs.length > 0) {
@@ -1023,8 +1018,6 @@ function playSong(item) {
     }
     
     if (downloadBtn) {
-        // Remove previous listeners by cloning (simple way) or just overriding onclick
-        // Overriding onclick is safer here as it's a single purpose button
         downloadBtn.onclick = (e) => {
             e.preventDefault();
             showToast(`Downloading "${songName}"...`);
@@ -1128,4 +1121,32 @@ function formatNumber(num) {
     return num;
 }
 
-// Lyrics Logic (Triggered by button usually, now only via manual call if implemented elsewhere or restored)
+async function openLyrics() {
+    if (!currentTrack) return;
+    lyricsOverlay.classList.add('active');
+    lyricsTitle.textContent = currentTrack.name || currentTrack.song?.name || '';
+    let artistName = currentTrack.primaryArtists || currentTrack.author?.name || '';
+    let trackName = currentTrack.name || currentTrack.song?.name || '';
+    const decodeHtml = (html) => { const txt = document.createElement("textarea"); txt.innerHTML = html; return txt.value; };
+    artistName = decodeHtml(artistName);
+    if (artistName.includes(',')) artistName = artistName.split(',')[0].trim();
+    trackName = decodeHtml(trackName);
+    trackName = trackName.replace(/\s*\(.*? (feat|ft|from|cover|remix).*?\)/gi, '');
+    trackName = trackName.replace(/\s*\[.*?\]/gi, ''); 
+    trackName = trackName.trim();
+    lyricsArtist.textContent = artistName;
+    lyricsText.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading...';
+    const url = `${LYRICS_API_BASE}?title=${encodeURIComponent(trackName)}&artist=${encodeURIComponent(artistName)}`;
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.data && json.data.lyrics) {
+            lyricsText.textContent = json.data.lyrics;
+        } else {
+            lyricsText.textContent = "Lyrics not found.";
+        }
+    } catch (e) {
+        console.error(e);
+        lyricsText.textContent = "Failed to load lyrics.";
+    }
+}
