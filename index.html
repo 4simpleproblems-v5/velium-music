@@ -45,26 +45,34 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
 
-        /* --- Toolbar Button Style --- */
+        /* --- Toolbar Button Style (Match 4SP DV) --- */
         .btn-toolbar-style {
-            background: #000;
+            background: #0a0a0a;
             border: 1px solid #333;
-            border-radius: 14px;
+            border-radius: 16px;
             color: #d1d5db;
-            padding: 0.5rem 1.25rem;
+            padding: 0.75rem 1.25rem;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
             font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            position: relative;
         }
         .btn-toolbar-style:hover {
             border-color: #fff;
             color: #fff;
-            transform: translateY(-1px);
+            transform: scale(1.02) translateY(-1px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.1);
+            z-index: 50;
+        }
+        .btn-toolbar-style:active {
+            transform: scale(0.98);
+            transition: transform 0.05s ease-out !important;
         }
         .btn-toolbar-style.active {
             background-color: rgba(79, 70, 229, 0.1);
@@ -87,7 +95,7 @@
             position: fixed;
             bottom: 0; left: 0; right: 0;
             height: 90px;
-            background-color: rgba(0,0,0,0.95);
+            background-color: #000000;
             border-top: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(20px);
             z-index: 100;
@@ -123,18 +131,20 @@
             flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;
             -webkit-appearance: none; outline: none; cursor: pointer;
         }
+        /* Thumb always visible */
         .progress-bar::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 10px; height: 10px; background: white; border-radius: 50%; opacity: 0; transition: opacity 0.2s;
+            -webkit-appearance: none; width: 12px; height: 12px; background: white; border-radius: 50%; opacity: 1; transition: transform 0.2s;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
-        .progress-container:hover .progress-bar::-webkit-slider-thumb { opacity: 1; }
+        .progress-container:hover .progress-bar::-webkit-slider-thumb { transform: scale(1.2); }
 
         .volume-controls { display: flex; align-items: center; gap: 1rem; width: 200px; justify-content: flex-end; color: rgba(255,255,255,0.6); }
         .volume-slider { width: 80px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; -webkit-appearance: none; outline: none; }
         .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; background: rgba(255,255,255,0.8); border-radius: 50%; }
 
-        /* --- Modals --- */
+        /* --- Modals (Match 4SP DV Settings) --- */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
             backdrop-filter: blur(5px); z-index: 200;
             display: flex; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none; transition: opacity 0.2s;
@@ -142,38 +152,80 @@
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
         .modal-content {
-            background: #111; border: 1px solid #333;
-            border-radius: 16px; padding: 24px;
-            width: 90%; max-width: 400px;
+            background: #000; border: 1px solid #333;
+            border-radius: 18px; 
+            width: 90%; max-width: 450px;
             transform: scale(0.95); transition: transform 0.2s;
+            overflow: hidden;
+            display: flex; flex-direction: column;
         }
         .modal-overlay.active .modal-content { transform: scale(1); }
 
-        .modal-input {
-            width: 100%; background: #000; border: 1px solid #333;
-            color: white; padding: 12px; border-radius: 8px;
-            margin: 16px 0; outline: none;
+        .modal-header {
+            padding: 1.5rem; border-bottom: 1px solid #333;
+            background: #000; display: flex; justify-content: space-between; align-items: center;
         }
-        .modal-input:focus { border-color: #4f46e5; }
+        .modal-body { padding: 1.5rem; background: #0a0a0a; display: flex; flex-direction: column; gap: 1rem; }
+
+        .modal-input {
+            width: 100%; background: #111; border: 1px solid #252525;
+            color: white; padding: 0.75rem; border-radius: 16px;
+            outline: none; transition: all 0.2s;
+        }
+        .modal-input:focus { border-color: #4f46e5; transform: scale(1.01); }
 
         .modal-btn {
-            width: 100%; padding: 12px; border-radius: 8px;
-            font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+            width: 100%; padding: 0.75rem 1.25rem; border-radius: 16px;
+            font-weight: 500; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center; font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
         }
-        .btn-primary { background: #4f46e5; color: white; }
-        .btn-primary:hover { opacity: 0.9; }
-        .btn-secondary { background: transparent; color: #9ca3af; border: 1px solid #333; margin-top: 8px; }
+        .modal-btn:hover { transform: scale(1.02) translateY(-1px); }
+        .modal-btn:active { transform: scale(0.98); transition: transform 0.05s ease-out !important; }
+
+        .btn-primary { background: rgba(79, 70, 229, 0.1); color: #4f46e5; border: 1px solid #4f46e5; }
+        .btn-primary:hover { background: rgba(79, 70, 229, 0.15); border-color: #6366f1; color: #6366f1; }
+        
+        .btn-secondary { background: #0a0a0a; color: #d1d5db; border: 1px solid #333; }
         .btn-secondary:hover { border-color: #fff; color: white; }
+        
+        .btn-danger { background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid #dc2626; }
+        .btn-danger:hover { background: rgba(220, 38, 38, 0.15); border-color: #ef4444; color: #ef4444; }
+
+        .close-btn-round {
+            width: 2.5rem; height: 2.5rem; border-radius: 16px;
+            background: #0a0a0a; border: 1px solid #333; color: #d1d5db;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .close-btn-round:hover { border-color: #fff; color: #fff; transform: scale(1.05); }
+
+        /* Cropper */
+        #cropper-modal-content { max-width: 600px; }
+        #cropperCanvasContainer {
+            position: relative; margin: 0 auto; overflow: hidden; max-height: 60vh; border: 1px dashed #333; border-radius: 8px;
+        }
+        canvas { display: block; max-width: 100%; }
 
         /* --- Library Drawer List Items --- */
         .compact-list-item {
-            border-radius: 0.5rem; 
+            border-radius: 16px; 
             margin-bottom: 2px;
             padding: 0.5rem; 
             transition: background-color 0.2s;
             cursor: pointer;
         }
         .compact-list-item:hover { background-color: #1a1a1a; }
+
+        /* --- Notifications --- */
+        #notification-container { position: fixed; bottom: 2rem; right: 2rem; display: flex; flex-direction: column; gap: 0.75rem; z-index: 1000; pointer-events: none; }
+        .notification-toast { background-color: #0a0a0a; border: 1px solid #333; border-radius: 14px; padding: 0.75rem 1.25rem; color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; min-width: 200px; transform: translateX(120%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease, background-color 0.2s; opacity: 0; pointer-events: auto; cursor: default; }
+        .notification-toast.show { transform: translateX(0); opacity: 1; }
+        .notification-toast.show:hover { transform: scale(1.05) translateX(-5px); background-color: #151515; border-color: #555; box-shadow: 0 8px 25px rgba(0,0,0,0.7); }
+        .notification-icon { font-size: 1.1rem; }
+        .notification-icon.success { color: #4ade80; }
+        .notification-icon.info { color: #60a5fa; }
+        .notification-icon.warning { color: #fbbf24; }
 
         /* --- Animations --- */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -211,6 +263,32 @@
              <button id="view-library-btn" class="btn-toolbar-style" title="My Library" onclick="document.getElementById('library-drawer').classList.toggle('translate-x-full')">
                 <i class="fas fa-layer-group"></i> Library
             </button>
+             <div class="relative">
+                <button id="settings-btn" class="btn-toolbar-style !px-3" title="Settings" onclick="toggleSettingsMenu()">
+                    <i class="fas fa-gear"></i>
+                </button>
+                <div id="settings-dropdown" class="absolute right-0 top-full mt-2 w-64 bg-[#0a0a0a] border border-[#333] rounded-2xl shadow-xl p-4 hidden z-50 transform origin-top-right transition-all duration-200">
+                    <h3 class="text-white font-bold mb-3 text-sm uppercase tracking-wider border-b border-[#333] pb-2">Playback</h3>
+                    
+                    <div class="flex flex-col gap-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 text-sm">Transition</span>
+                            <select id="transition-select" class="bg-[#111] text-white text-sm border border-[#333] rounded-lg p-1 outline-none focus:border-indigo-500" onchange="handleTransitionChange()">
+                                <option value="none">None</option>
+                                <option value="crossfade">Crossfade</option>
+                            </select>
+                        </div>
+
+                        <div id="crossfade-slider-container" class="hidden flex-col gap-1 transition-all duration-300">
+                            <div class="flex justify-between text-xs text-gray-500">
+                                <span>Duration</span>
+                                <span id="crossfade-value">6s</span>
+                            </div>
+                            <input type="range" id="crossfade-slider" min="3" max="12" value="6" step="1" class="w-full accent-indigo-500 h-1 bg-[#333] rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -221,9 +299,9 @@
         <div class="max-w-3xl mx-auto mb-12">
             <div id="search-container" class="relative flex items-center bg-[#111] border border-[#333] rounded-2xl p-2 group transition-all">
                 <i class="fas fa-search text-gray-500 ml-4 text-lg"></i>
-                <input type="text" id="search-box" placeholder="Search for songs, artists, or albums..." 
+                <input type="text" id="search-box" placeholder="Search for songs, artists..." 
                        class="w-full bg-transparent border-none outline-none text-white px-4 py-3 text-lg placeholder-gray-600 font-light">
-                <button id="search-btn" class="bg-[#222] hover:bg-[#333] text-white px-6 py-2 rounded-xl transition-colors font-medium">Search</button>
+                <button onclick="handleSearch()" class="btn-toolbar-style active px-8">Search</button>
             </div>
         </div>
 
@@ -269,61 +347,138 @@
         <div class="custom-player-controls">
             <div class="control-buttons">
                 <button class="player-btn" id="player-like-btn" title="Like"><i class="far fa-heart"></i></button>
-                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime -= 10"><i class="fas fa-backward-step text-base"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime -= 10"><i class="fas fa-backward text-base"></i></button>
                 <button class="play-btn" id="play-pause-btn"><i class="fas fa-play-circle"></i></button>
-                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime += 10"><i class="fas fa-forward-step text-base"></i></button>
-                <button class="player-btn" title="Lyrics" onclick="openLyrics()"><i class="fas fa-align-center"></i></button>
+                <button class="player-btn" onclick="document.getElementById('audio-player').currentTime += 10"><i class="fas fa-forward text-base"></i></button>
+                <button class="player-btn" title="Add to Playlist" onclick="addCurrentToPlaylist()"><i class="fas fa-plus"></i></button>
             </div>
             <div class="progress-container">
                 <span id="current-time">0:00</span>
-                <input type="range" class="progress-bar" id="seek-slider" min="0" max="100" value="0">
+                <input type="range" class="progress-bar" id="seek-slider" min="0" max="100" step="0.01" value="0">
                 <span id="total-duration">0:00</span>
             </div>
         </div>
 
         <div class="volume-controls">
-             <i class="fas fa-volume-up"></i>
+             <i id="volume-icon" class="fas fa-volume-up cursor-pointer" onclick="toggleMute()"></i>
              <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1">
              <a href="#" id="download-btn" class="player-btn text-sm ml-2" target="_blank" title="Download"><i class="fas fa-download"></i></a>
         </div>
         
-        <audio id="audio-player" class="hidden" crossorigin="anonymous"></audio>
+        <audio id="audio-player" class="hidden"></audio>
+        <audio id="audio-player-2" class="hidden"></audio>
     </div>
 
     <!-- Create Playlist Modal -->
     <div id="create-playlist-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="text-xl font-bold text-white mb-2">Create Playlist</h3>
-            <p class="text-gray-400 text-sm">Give your new playlist a name.</p>
-            <input type="text" id="new-playlist-name" class="modal-input" placeholder="My Awesome Playlist">
-            <button onclick="confirmCreatePlaylist()" class="modal-btn btn-primary">Create</button>
-            <button onclick="closeModals()" class="modal-btn btn-secondary">Cancel</button>
+            <div class="modal-header">
+                <h3 class="text-xl font-bold text-white">Create Playlist</h3>
+                <button onclick="closeModals()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-gray-400 text-sm">Give your new playlist a name.</p>
+                <input type="text" id="new-playlist-name" class="modal-input" placeholder="My Awesome Playlist">
+                <button onclick="confirmCreatePlaylist()" class="modal-btn btn-primary mt-2">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Playlist Modal -->
+    <div id="edit-playlist-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="text-xl font-bold text-white">Edit Playlist</h3>
+                <button onclick="closeModals()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <label class="text-gray-400 text-xs font-bold uppercase tracking-wider">Playlist Name</label>
+                <input type="text" id="edit-playlist-name" class="modal-input" placeholder="Playlist Name">
+                
+                <label class="text-gray-400 text-xs font-bold uppercase tracking-wider mt-2">Cover Image</label>
+                <button onclick="triggerCoverUpload()" class="btn-toolbar-style w-full justify-center">
+                    <i class="fas fa-cloud-arrow-up"></i> Upload New Cover
+                </button>
+                <input type="file" id="playlist-cover-input" accept="image/*" class="hidden">
+
+                <div class="flex gap-2 mt-6">
+                    <button onclick="savePlaylistChanges()" class="modal-btn btn-primary flex-1">Save Changes</button>
+                    <button onclick="deletePlaylist()" class="modal-btn btn-danger flex-1">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cropper Modal -->
+    <div id="cropper-modal" class="modal-overlay" style="z-index: 210;">
+        <div class="modal-content" id="cropper-modal-content">
+            <div class="modal-header">
+                <h3 class="text-xl font-bold text-white">Crop Cover</h3>
+                <button onclick="closeCropper()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
+            </div>
+            
+            <div class="p-6 bg-[#0a0a0a]">
+                <p class="text-xs text-gray-500 text-center mb-4">Drag to move. Scroll to resize.</p>
+                <div id="cropperCanvasContainer" class="bg-black flex justify-center items-center shadow-inner">
+                    <canvas id="cropperCanvas"></canvas>
+                </div>
+                
+                <div class="flex justify-end gap-2 mt-6">
+                    <button onclick="submitCrop()" class="modal-btn btn-primary w-auto px-8">Apply Crop</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Add to Playlist Modal -->
     <div id="add-to-playlist-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="text-xl font-bold text-white mb-4">Add to Playlist</h3>
-            <div id="modal-playlist-list" class="space-y-2 max-h-60 overflow-y-auto">
-                <!-- Populated dynamically -->
+            <div class="modal-header">
+                <h3 class="text-xl font-bold text-white">Add to Playlist</h3>
+                <button onclick="closeModals()" class="close-btn-round"><i class="fas fa-xmark"></i></button>
             </div>
-            <button onclick="closeModals()" class="modal-btn btn-secondary mt-4">Cancel</button>
-        </div>
-    </div>
-
-    <!-- Lyrics Overlay -->
-    <div id="lyrics-overlay" class="fixed inset-0 bg-black/90 backdrop-blur-xl z-[200] opacity-0 pointer-events-none transition-opacity duration-300 flex flex-col items-center justify-center p-8">
-        <button class="close-lyrics absolute top-8 right-8 text-white text-3xl hover:text-gray-300" id="close-lyrics"><i class="fas fa-times"></i></button>
-        <div class="text-center max-w-2xl h-full overflow-y-auto no-scrollbar">
-            <h2 class="text-3xl text-white font-bold mb-2" id="lyrics-title">Title</h2>
-            <h3 class="text-xl text-indigo-400 mb-8" id="lyrics-artist">Artist</h3>
-            <div class="text-2xl text-gray-300 font-light leading-relaxed whitespace-pre-wrap" id="lyrics-text">Loading lyrics...</div>
+            <div class="modal-body">
+                <div id="modal-playlist-list" class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- DB and Script -->
     <script src="db.js"></script>
     <script src="script.js"></script>
+
+    <div id="notification-container"></div>
+    <script>
+    // --- Sound & Notification Logic ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let isMuted = false;
+
+    function playClickSound() {
+        if (isMuted) return; if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.015);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.015);
+    }
+
+    const notificationContainer = document.getElementById('notification-container');
+    window.showNotification = function(message, iconClass = 'fa-solid fa-info-circle', type = 'info') {
+        if (!notificationContainer) return;
+        while (notificationContainer.children.length >= 3) notificationContainer.removeChild(notificationContainer.firstChild);
+        const toast = document.createElement('div'); toast.className = 'notification-toast';
+        toast.innerHTML = `<i class="${iconClass} notification-icon ${type}"></i><span>${message}</span>`;
+        notificationContainer.appendChild(toast);
+        requestAnimationFrame(() => { toast.classList.add('show'); playClickSound(); });
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => { if (toast.parentElement) toast.remove(); }, 300); }, 3000);
+    };
+    
+    // Alias for existing calls
+    window.showToast = function(msg) {
+        window.showNotification(msg, 'fa-solid fa-bell', 'info');
+    };
+    </script>
 </body>
 </html>
