@@ -37,6 +37,26 @@ const GRID_CLASS = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', initApp);
 
+document.addEventListener('keydown', (e) => {
+    // Ignore if typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    if (e.code === 'Space') {
+        e.preventDefault(); // Prevent scrolling
+        togglePlay();
+    } else if (e.code === 'ArrowRight') {
+        if (audioPlayer) audioPlayer.currentTime += 10;
+        showToast('Forward 10s');
+    } else if (e.code === 'ArrowLeft') {
+        if (audioPlayer) audioPlayer.currentTime -= 10;
+        showToast('Back 10s');
+    } else if (e.key.toLowerCase() === 'f') {
+        if (currentTrack) {
+            toggleLike(currentTrack);
+        }
+    }
+});
+
 async function initApp() {
     try {
         console.log("Initializing Velium Music...");
@@ -1069,10 +1089,4 @@ function formatNumber(num) {
     return num;
 }
 
-function showToast(msg) {
-    const div = document.createElement('div');
-    div.className = 'fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full shadow-lg text-sm z-50 animate-fade-in';
-    div.textContent = msg;
-    document.body.appendChild(div);
-    setTimeout(() => div.remove(), 2000);
-}
+// Lyrics Logic (Triggered by button usually, now only via manual call if implemented elsewhere or restored)

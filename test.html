@@ -217,6 +217,16 @@
         }
         .compact-list-item:hover { background-color: #1a1a1a; }
 
+        /* --- Notifications --- */
+        #notification-container { position: fixed; bottom: 2rem; right: 2rem; display: flex; flex-direction: column; gap: 0.75rem; z-index: 1000; pointer-events: none; }
+        .notification-toast { background-color: #0a0a0a; border: 1px solid #333; border-radius: 14px; padding: 0.75rem 1.25rem; color: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; min-width: 200px; transform: translateX(120%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease, background-color 0.2s; opacity: 0; pointer-events: auto; cursor: default; }
+        .notification-toast.show { transform: translateX(0); opacity: 1; }
+        .notification-toast.show:hover { transform: scale(1.05) translateX(-5px); background-color: #151515; border-color: #555; box-shadow: 0 8px 25px rgba(0,0,0,0.7); }
+        .notification-icon { font-size: 1.1rem; }
+        .notification-icon.success { color: #4ade80; }
+        .notification-icon.info { color: #60a5fa; }
+        .notification-icon.warning { color: #fbbf24; }
+
         /* --- Animations --- */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -411,5 +421,37 @@
     <!-- DB and Script -->
     <script src="db.js"></script>
     <script src="script.js"></script>
+
+    <div id="notification-container"></div>
+    <script>
+    // --- Sound & Notification Logic ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let isMuted = false;
+
+    function playClickSound() {
+        if (isMuted) return; if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+        osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.015);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.015);
+    }
+
+    const notificationContainer = document.getElementById('notification-container');
+    window.showNotification = function(message, iconClass = 'fa-solid fa-info-circle', type = 'info') {
+        if (!notificationContainer) return;
+        while (notificationContainer.children.length >= 3) notificationContainer.removeChild(notificationContainer.firstChild);
+        const toast = document.createElement('div'); toast.className = 'notification-toast';
+        toast.innerHTML = `<i class="${iconClass} notification-icon ${type}"></i><span>${message}</span>`;
+        notificationContainer.appendChild(toast);
+        requestAnimationFrame(() => { toast.classList.add('show'); playClickSound(); });
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => { if (toast.parentElement) toast.remove(); }, 300); }, 3000);
+    };
+    
+    // Alias for existing calls
+    window.showToast = function(msg) {
+        window.showNotification(msg, 'fa-solid fa-bell', 'info');
+    };
+    </script>
 </body>
 </html>
