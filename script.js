@@ -964,13 +964,38 @@ function playSong(item) {
     }
     
     if (downloadBtn) {
-        downloadBtn.href = downloadUrl;
-        downloadBtn.setAttribute('download', `${songName}.mp3`);
+        // Remove previous listeners by cloning (simple way) or just overriding onclick
+        // Overriding onclick is safer here as it's a single purpose button
+        downloadBtn.onclick = (e) => {
+            e.preventDefault();
+            showToast(`Downloading "${songName}"...`);
+            downloadResource(downloadUrl, `${songName}.mp3`);
+        };
     }
 
     if (playerBar) {
         playerBar.classList.remove('hidden');
         playerBar.style.display = 'flex'; 
+    }
+}
+
+async function downloadResource(url, filename) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
+        const blob = await response.blob();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        showToast("Download started!");
+    } catch (error) {
+        console.error("Download failed:", error);
+        showToast("Download failed. Opening in new tab.");
+        window.open(url, '_blank');
     }
 }
 
